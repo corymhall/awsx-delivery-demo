@@ -142,7 +142,7 @@ if (isDeliveryRun && (!deliveryRun || !/^[1-9][0-9]*$/.test(deliveryRun))) {
 }
 const organization = pulumi.getOrganization();
 const pipelineProject = 'awsx-delivery-demo-pipeline';
-const pipelineStack = 'main';
+const pipelineStack = 'dev';
 const team = new pulumiservice.Team('delivery-hooks', {
   organizationName: organization,
   name: 'awsx-delivery-demo-hooks',
