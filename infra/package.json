@@ -1,0 +1,31 @@
+{
+  "name": "awsx-delivery-demo-infra",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint --deny-warnings .",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run format:check && npm run lint && npm run typecheck"
+  },
+  "dependencies": {
+    "@pulumi/aws": "^7.53.0",
+    "@pulumi/aws-native": "^1.85.0",
+    "@pulumi/awsx": "^3.12.0",
+    "@pulumi/awsx-next": "file:sdks/pulumi-awsx-next",
+    "@pulumi/awsx-next-private": "file:sdks/pulumi-awsx-next-private",
+    "@pulumi/pulumi": "^3.274.0",
+    "@pulumi/pulumiservice": "^1.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "typescript": "^6.0.3"
+  },
+  "allowScripts": {
+    "file:sdks/pulumi-awsx-next": true,
+    "file:sdks/pulumi-awsx-next-private": true
+  }
+}

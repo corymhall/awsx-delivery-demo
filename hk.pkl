@@ -1,0 +1,27 @@
+amends "package://github.com/jdx/hk/releases/download/v1.51.0/hk@1.51.0#/Config.pkl"
+
+min_hk_version = "1.51.0"
+
+hooks {
+  ["pre-commit"] {
+    steps {
+      ["validate"] {
+        check = "mise run validate"
+      }
+    }
+  }
+  ["check"] {
+    steps {
+      ["validate"] {
+        check = "mise run validate"
+      }
+    }
+  }
+  ["pre-push"] {
+    steps {
+      ["validate"] {
+        check = "mise run validate"
+      }
+    }
+  }
+}

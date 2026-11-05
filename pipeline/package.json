@@ -1,0 +1,25 @@
+{
+  "name": "awsx-delivery-demo-pipeline",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint --deny-warnings .",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run format:check && npm run lint && npm run typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@pulumi/delivery": "file:sdks/delivery-delivery",
+    "@pulumi/pulumi": "^3.274.0"
+  },
+  "allowScripts": {
+    "file:sdks/delivery-delivery": true
+  }
+}

@@ -1,0 +1,8 @@
+name: awsx-delivery-demo-pipeline
+description: AWSX delivery demo
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+packages:
+  delivery: pulumi/pulumi/delivery@0.0.1-alpha.3

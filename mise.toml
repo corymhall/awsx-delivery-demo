@@ -1,0 +1,48 @@
+[settings]
+experimental = true
+lockfile = true
+lockfile_platforms = ["linux-x64", "macos-arm64", "macos-x64"]
+
+[env]
+HK_MISE = "1"
+
+[tools]
+node = "24.22.2"
+hk = "1.51.0"
+
+[deps.npm]
+dir = "infra"
+auto = true
+run = "rm -rf sdks/delivery-delivery/bin && npm ci"
+
+[tasks.format]
+description = "Format infrastructure files"
+dir = "infra"
+run = "npm run format"
+
+[tasks."format:check"]
+description = "Check infrastructure formatting"
+dir = "infra"
+run = "npm run format:check"
+
+[tasks.lint]
+description = "Lint infrastructure TypeScript"
+dir = "infra"
+run = "npm run lint"
+
+[tasks.typecheck]
+description = "Type-check infrastructure TypeScript"
+dir = "infra"
+run = "npm run typecheck"
+
+[tasks."check:hooks"]
+description = "Validate the hk configuration"
+run = "hk config dump >/dev/null"
+
+[tasks.validate]
+description = "Run all repository checks"
+depends = ["format:check", "lint", "typecheck", "check:hooks"]
+
+[tasks."hooks:install"]
+description = "Install repository Git hooks through mise"
+run = "hk install --mise"
