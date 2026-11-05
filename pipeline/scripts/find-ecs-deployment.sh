@@ -20,6 +20,8 @@ printf 'ECS_CLUSTER=%q\nECS_SERVICE=%q\nAWS_REGION=%q\n' \
 export AWS_PAGER=''
 export AWS_CLI_AUTO_PROMPT=off
 aws_options=(--output json --cli-connect-timeout 10 --cli-read-timeout 30)
+# Keep caller identity out of the deployment ARN captured by the caller.
+aws sts get-caller-identity "${aws_options[@]}" >&2
 token=''
 matches=()
 
