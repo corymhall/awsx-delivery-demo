@@ -165,7 +165,7 @@ const hookLambda = new privateAwsxNext.PulumiApiHook(
 
 // Account-wide outbound federation must already be enabled. Only look it up here.
 const federation = aws.iam.getOutboundWebIdentityFederationOutput({ provider });
-const issuer = new pulumiservice.OidcIssuer('delivery-hook-aws', {
+new pulumiservice.OidcIssuer('delivery-hook-aws', {
   organization,
   name: 'awsx-delivery-demo-aws',
   url: federation.issuerIdentifier,
@@ -182,16 +182,13 @@ const issuer = new pulumiservice.OidcIssuer('delivery-hook-aws', {
     },
   ],
 });
-const pipelineAccess = new pulumiservice.TeamStackPermission('delivery-hook-pipeline', {
+new pulumiservice.TeamStackPermission('delivery-hook-pipeline', {
   organization,
   project: pipelineProject,
   stack: pipelineStack,
   team: teamName,
   permission: pulumiservice.TeamStackPermissionScope.Edit,
 });
-const readyFunctionArn = pulumi
-  .all([hookLambda.functionArn, issuer.id, pipelineAccess.id])
-  .apply(([arn]) => arn);
 
 const service = new awsxNext.Service(
   'service',
@@ -225,7 +222,7 @@ const service = new awsxNext.Service(
                   },
                 }
               : { mode: 'manual' },
-            functionArn: readyFunctionArn,
+            functionArn: hookLambda.functionArn,
           },
         ],
       },
