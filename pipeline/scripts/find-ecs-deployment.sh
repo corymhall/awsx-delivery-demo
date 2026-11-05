@@ -13,6 +13,10 @@ if [[ ! "$DELIVERY_RUN" =~ ^[1-9][0-9]*$ ]]; then
   exit 1
 fi
 
+# Log to stderr so command substitution captures only the deployment ARN.
+printf 'ECS_CLUSTER=%q\nECS_SERVICE=%q\nAWS_REGION=%q\n' \
+  "$ECS_CLUSTER" "$ECS_SERVICE" "${AWS_REGION:-}" >&2
+
 export AWS_PAGER=''
 export AWS_CLI_AUTO_PROMPT=off
 aws_options=(--output json --cli-connect-timeout 10 --cli-read-timeout 30)
