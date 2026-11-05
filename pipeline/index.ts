@@ -3,7 +3,7 @@ import * as pulumi from '@pulumi/pulumi';
 
 const app = new delivery.GitHubSource('app', {
   branch: 'main',
-  repository: 'pulumi/awsx-delivery-demo',
+  repository: 'corymhall/awsx-delivery-demo',
   trigger: true,
 });
 
