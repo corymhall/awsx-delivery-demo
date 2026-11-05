@@ -29,3 +29,25 @@ url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2-darwin-arm64.tar.gz"
 [tools.node."platforms.macos-x64"]
 checksum = "sha256:d5e336d588c45be0c37dbd52cc29895593009ca4997a77a1fd02815131ed0e52"
 url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2-darwin-x64.tar.gz"
+
+[[tools.pulumi]]
+version = "3.273.0"
+backend = "aqua:pulumi/pulumi"
+
+[tools.pulumi."platforms.linux-x64"]
+checksum = "sha256:ec08f86671fd58f0a186540e1cee00066393beaf5c6716b0075f690919800432"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685615955"
+provenance = "cosign"
+
+[tools.pulumi."platforms.macos-arm64"]
+checksum = "sha512:336f0909d9332e277d40d14bc15f4ed70cb385322e46ef5896cd7b238977e65a8d857ff9b44ad114be28e2d163b26ba61ff3a93b29e452843640303706538c58"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685614955"
+provenance = "cosign"
+
+[tools.pulumi."platforms.macos-x64"]
+checksum = "sha256:ce6be877da705f622750427b5c1bbf1f9b188eb37d1d175ebedbfab1745b4191"
+url = "https://github.com/pulumi/pulumi/releases/download/v3.273.0/pulumi-v3.273.0-darwin-x64.tar.gz"
+url_api = "https://api.github.com/repos/pulumi/pulumi/releases/assets/685615132"
+provenance = "cosign"

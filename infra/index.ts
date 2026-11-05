@@ -196,6 +196,7 @@ const service = new awsxNext.Service(
     taskDefinitionArn: task.taskDefinitionArn,
     clusterArn: cluster.arn,
     vpcSubnetIds: vpc.privateSubnetIds,
+    waitForSteadyState: false,
     deploymentStrategy: {
       blueGreen: {
         bakeTimeMinutes: 2,
@@ -241,16 +242,6 @@ const service = new awsxNext.Service(
   },
   {
     providers: [provider, ccapiProvider],
-    // Delivery runs delegate deployment health to the checkpoint Job.
-    transforms: [
-      (args) =>
-        args.type === 'aws:ecs/service:Service'
-          ? {
-              props: { ...args.props, waitForSteadyState: !isDeliveryRun },
-              opts: args.opts,
-            }
-          : undefined,
-    ],
   },
 );
 
