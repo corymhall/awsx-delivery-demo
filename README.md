@@ -61,21 +61,30 @@ No task or hook runs Pulumi operations.
 
 ## ECS deployment verification
 
-The `checkpoint` stage waits for ECS to reach its Lambda hook and for human
-approval. Its `verify-deployment` Job then discovers and waits for that run's
-exact ECS deployment. This expects the API hook to use `waitForApproval: true`,
-without a separate ECS pause hook or continuation Job.
+After updating infra, the `dev` stage runs `discover-deployment`. It finds the
+run's exact ECS deployment before `checkpoint` can open its gate. The checkpoint
+stage is always declared. Its `when` input resolves to the approval and manual
+rules when a deployment exists, or `undefined` for a verified no-op. This is an
+experiment in resolving a previously unknown gate input to no gate.
 
-The infra stack exports `ecsCluster` and `ecsService`. The pipeline passes these
-from `stacks.outputs` to the checkpoint Job as `ECS_CLUSTER` and `ECS_SERVICE`.
-No service-discovery tags or identifier config are required.
+For a deployment, `checkpoint` waits for ECS to reach its Lambda hook and for
+human approval, then `verify-deployment` waits for the discovered ARN. This
+expects the API hook to use `waitForApproval: true`, without a separate ECS pause
+hook or continuation Job. For a no-op, verification logs that there is nothing
+to approve or wait for.
 
-Attach an ESC environment to supply AWS credentials. No `jobEnvironment` config
-is required. The Job uses region `us-east-2`.
+The infra stack exports `ecsCluster`, `ecsService`, and `ecsTaskDefinition`.
+Discovery uses these outputs and matches the hook's `checkpoint` stage, even
+though the discovery Job itself runs in `dev`.
+
+Both AWS Jobs run through `pulumi env run awsx-delivery-demo/dev` to obtain AWS
+credentials. They use region `us-east-2`. The runner must be authenticated to
+Pulumi and authorized to open that ESC environment.
 
 The Job runner needs Bash, AWS CLI v2 with service-deployment support, and `jq`.
-Its AWS identity needs `ecs:ListServiceDeployments` and
-`ecs:DescribeServiceDeployments` for the target service and its deployments.
+Its AWS identity needs `ecs:ListServiceDeployments`,
+`ecs:DescribeServiceDeployments`, `ecs:DescribeServices`, and
+`ecs:DescribeServiceRevisions` for the target service, revisions, and deployments.
 
 The ECS Lambda hook's `hookDetails.call` must contain:
 
@@ -88,10 +97,24 @@ The ECS Lambda hook's `hookDetails.call` must contain:
 
 `pipeline/scripts/find-ecs-deployment.sh` examines all pages of deployment history,
 including completed, stopped, and rolled-back deployments. It matches the pipeline,
-run, and stage in the configured Lambda hook details. Zero or multiple matches
-fail instead of selecting the newest deployment. The chosen ARN is then passed to
-`wait-for-ecs-deployment.sh`, which polls every 15 seconds for up to 30 minutes and
-fails on rollback, stopped or missing deployments, AWS errors, or timeout.
+run, and stage in the configured Lambda hook details. Multiple matches fail.
+With `--allow-no-deployment`, zero matches count as a no-op only when there are
+no active deployments, the latest deployment succeeded with the expected task
+definition, and the service has the expected task definition, current run's hook
+configuration, no pending tasks, and its desired running task count. Discovery
+requires three no-op observations spaced 10 seconds apart. Errors and ambiguous
+states fail rather than bypassing approval. These are observational checks, not
+an atomic record of what the infra update did.
+
+The chosen ARN is passed to `wait-for-ecs-deployment.sh`, which polls every 15
+seconds for up to 30 minutes and fails on rollback, stopped or missing deployments,
+AWS errors, or timeout.
+
+Run the offline discovery checks with:
+
+```sh
+python3 pipeline/scripts/test_discovery.py
+```
 
 During Delivery runs, the app update returns without waiting for ECS steady state
 so the downstream approval gate can open. Manual updates wait for steady state.

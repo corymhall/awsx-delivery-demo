@@ -17,17 +17,6 @@ const pipeline = new delivery.Pipeline('demo', {
 const dev = new delivery.Stage('dev', {
   pipeline,
 });
-const checkpoint = new delivery.Stage('checkpoint', {
-  pipeline,
-  from: [dev],
-  when: delivery.allOfOutput({
-    rules: [
-      delivery.approvalOutput(),
-      delivery.manualOutput({ name: 'pause-hook', description: 'Wait for ECS test traffic' }),
-    ],
-  }),
-});
-
 const stacks = new delivery.Stacks('dev', {
   stage: dev,
   stacks: {
@@ -43,13 +32,45 @@ const env = stacks.outputs.apply((outputs) => ({
   AWS_REGION: 'us-east-2',
   ECS_CLUSTER: String(outputs.app.ecsCluster),
   ECS_SERVICE: String(outputs.app.ecsService),
+  ECS_TASK_DEFINITION: String(outputs.app.ecsTaskDefinition),
+  ECS_GATE_STAGE: 'checkpoint',
 }));
+
+const discovery = new delivery.Job('discover-deployment', {
+  stage: dev,
+  command: 'pulumi env run awsx-delivery-demo/dev -- bash ./discover-ecs-deployment.sh',
+  directory: 'pipeline/scripts',
+  source: app,
+  environment: env,
+});
+
+const deploymentArn = discovery.outputs.apply((outputs) => {
+  if (outputs.result === 'no-deployment' && outputs.deploymentArn === '') return '';
+  if (outputs.result === 'deployment' && outputs.deploymentArn?.startsWith('arn:')) {
+    return outputs.deploymentArn;
+  }
+  throw new Error('Deployment discovery returned an invalid result');
+});
+
+const approval = delivery.allOfOutput({
+  rules: [
+    delivery.approvalOutput(),
+    delivery.manualOutput({ name: 'pause-hook', description: 'Wait for ECS test traffic' }),
+  ],
+});
+
+// Keep the stage declared during preview. Its gate is unknown until discovery finishes.
+const checkpoint = new delivery.Stage('checkpoint', {
+  pipeline,
+  from: [dev],
+  when: deploymentArn.apply((arn) => (arn ? approval : undefined)),
+});
 
 new delivery.Job('verify-deployment', {
   stage: checkpoint,
   command:
-    'pulumi env run awsx-delivery-demo/dev -- bash -c \'deployment_arn=$(./find-ecs-deployment.sh) && ./wait-for-ecs-deployment.sh "$deployment_arn" 1800\'',
+    'if [ -n "$ECS_DEPLOYMENT_ARN" ]; then pulumi env run awsx-delivery-demo/dev -- bash ./wait-for-ecs-deployment.sh "$ECS_DEPLOYMENT_ARN" 1800; else echo "No ECS deployment for this run; nothing to approve or wait for."; fi',
   directory: 'pipeline/scripts',
   source: app,
-  environment: env,
+  environment: { AWS_REGION: 'us-east-2', ECS_DEPLOYMENT_ARN: deploymentArn },
 });

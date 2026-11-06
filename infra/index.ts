@@ -247,3 +247,4 @@ const service = new awsxNext.Service(
 
 export const ecsCluster = cluster.arn;
 export const ecsService = service.serviceName;
+export const ecsTaskDefinition = task.taskDefinitionArn;
