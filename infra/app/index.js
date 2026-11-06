@@ -11,7 +11,7 @@ http
     res.end(
       JSON.stringify({
         status: 'OK',
-        message: 'Hello from the ECS native deployment demo',
+        message: 'Hello from the ECS native deployment demo!',
         commit: process.env.RELEASE_COMMIT,
       }),
     );
