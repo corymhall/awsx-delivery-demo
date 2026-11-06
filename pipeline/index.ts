@@ -66,11 +66,15 @@ const checkpoint = new delivery.Stage('checkpoint', {
   when: deploymentArn.apply((arn) => (arn ? approval : undefined)),
 });
 
-new delivery.Job('verify-deployment', {
-  stage: checkpoint,
-  command:
-    'if [ -n "$ECS_DEPLOYMENT_ARN" ]; then pulumi env run awsx-delivery-demo/dev -- bash ./wait-for-ecs-deployment.sh "$ECS_DEPLOYMENT_ARN" 1800; else echo "No ECS deployment for this run; nothing to approve or wait for."; fi',
-  directory: 'pipeline/scripts',
-  source: app,
-  environment: { AWS_REGION: 'us-east-2', ECS_DEPLOYMENT_ARN: deploymentArn },
+// Defer the stage reference until discovery resolves. This Job is absent from
+// previews while discovery is unknown; checkpoint itself remains declared.
+deploymentArn.apply((arn) => {
+  new delivery.Job('verify-deployment', {
+    stage: checkpoint,
+    command:
+      'if [ -n "$ECS_DEPLOYMENT_ARN" ]; then pulumi env run awsx-delivery-demo/dev -- bash ./wait-for-ecs-deployment.sh "$ECS_DEPLOYMENT_ARN" 1800; else echo "No ECS deployment for this run; nothing to approve or wait for."; fi',
+    directory: 'pipeline/scripts',
+    source: app,
+    environment: { AWS_REGION: 'us-east-2', ECS_DEPLOYMENT_ARN: arn },
+  });
 });
