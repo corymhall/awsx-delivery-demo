@@ -48,7 +48,7 @@ const env = stacks.outputs.apply((outputs) => ({
 new delivery.Job('verify-deployment', {
   stage: checkpoint,
   command:
-    'deployment_arn=$(./find-ecs-deployment.sh) && ./wait-for-ecs-deployment.sh "$deployment_arn" 1800',
+    'pulumi env run awsx-delivery-demo/dev -- bash -c \'deployment_arn=$(./find-ecs-deployment.sh) && ./wait-for-ecs-deployment.sh "$deployment_arn" 1800\'',
   directory: 'pipeline/scripts',
   source: app,
   environment: env,
