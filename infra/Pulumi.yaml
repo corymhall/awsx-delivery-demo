@@ -5,5 +5,5 @@ runtime:
   options:
     packagemanager: npm
 packages:
-  awsx-next-private: github.com/corymhall/awsx-next-private@6f2febf
+  awsx-next-private: github.com/corymhall/awsx-next-private@2b510a8771d833217125a7fb5db9ca5827fb1ef9
   awsx-next: github.com/pulumi/pulumi-awsx.git/awsx-next@f73137d

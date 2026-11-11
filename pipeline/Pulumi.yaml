@@ -6,3 +6,4 @@ runtime:
     packagemanager: npm
 packages:
   delivery: pulumi/pulumi/delivery@0.0.1-alpha.3
+  awsx-next-private: github.com/corymhall/awsx-next-private@2b510a8771d833217125a7fb5db9ca5827fb1ef9

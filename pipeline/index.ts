@@ -1,4 +1,5 @@
 import * as delivery from '@pulumi/delivery';
+import * as privateAwsxNext from '@pulumi/awsx-next-private';
 import * as pulumi from '@pulumi/pulumi';
 
 const app = new delivery.GitHubSource('app', {
@@ -28,53 +29,14 @@ const stacks = new delivery.Stacks('dev', {
   },
 });
 
-const env = stacks.outputs.apply((outputs) => ({
-  AWS_REGION: 'us-east-2',
-  ECS_CLUSTER: String(outputs.app.ecsCluster),
-  ECS_SERVICE: String(outputs.app.ecsService),
-  ECS_TASK_DEFINITION: String(outputs.app.ecsTaskDefinition),
-  ECS_GATE_STAGE: 'checkpoint',
-}));
-
-const discovery = new delivery.Job('discover-deployment', {
-  stage: dev,
-  command: 'pulumi env run awsx-delivery-demo/dev -- bash ./discover-ecs-deployment.sh',
-  directory: 'pipeline/scripts',
-  source: app,
-  environment: env,
-});
-
-const deploymentArn = discovery.outputs.apply((outputs) => {
-  if (outputs.result === 'no-deployment' && outputs.deploymentArn === '') return '';
-  if (outputs.result === 'deployment' && outputs.deploymentArn?.startsWith('arn:')) {
-    return outputs.deploymentArn;
-  }
-  throw new Error('Deployment discovery returned an invalid result');
-});
-
-const approval = delivery.allOfOutput({
-  rules: [
-    delivery.approvalOutput(),
-    delivery.manualOutput({ name: 'pause-hook', description: 'Wait for ECS test traffic' }),
-  ],
-});
-
-// Keep the stage declared during preview. Its gate is unknown until discovery finishes.
-const checkpoint = new delivery.Stage('checkpoint', {
-  pipeline,
-  from: [dev],
-  when: deploymentArn.apply((arn) => (arn ? approval : undefined)),
-});
-
-// Defer the stage reference until discovery resolves. This Job is absent from
-// previews while discovery is unknown; checkpoint itself remains declared.
-deploymentArn.apply((arn) => {
-  new delivery.Job('verify-deployment', {
-    stage: checkpoint,
-    command:
-      'if [ -n "$ECS_DEPLOYMENT_ARN" ]; then pulumi env run awsx-delivery-demo/dev -- bash ./wait-for-ecs-deployment.sh "$ECS_DEPLOYMENT_ARN" 1800; else echo "No ECS deployment for this run; nothing to approve or wait for."; fi',
-    directory: 'pipeline/scripts',
-    source: app,
-    environment: { AWS_REGION: 'us-east-2', ECS_DEPLOYMENT_ARN: arn },
-  });
+new privateAwsxNext.EcsDeploymentCheckpoint('checkpoint', {
+  pipelineUrn: pipeline.urn,
+  upstreamStageUrn: dev.urn,
+  sourceUrn: app.urn,
+  conditionName: 'pause-hook',
+  clusterArn: stacks.outputs.apply((outputs) => String(outputs.app.ecsCluster)),
+  serviceName: stacks.outputs.apply((outputs) => String(outputs.app.ecsService)),
+  taskDefinitionArn: stacks.outputs.apply((outputs) => String(outputs.app.ecsTaskDefinition)),
+  region: 'us-east-2',
+  environment: 'awsx-delivery-demo/dev',
 });

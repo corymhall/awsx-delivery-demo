@@ -10,6 +10,7 @@
     "check": "npm run format:check && npm run lint && npm run typecheck"
   },
   "dependencies": {
+    "@pulumi/awsx-next-private": "file:sdks/pulumi-awsx-next-private",
     "@pulumi/delivery": "file:sdks/delivery-delivery",
     "@pulumi/pulumi": "^3.274.0"
   },
@@ -21,6 +22,7 @@
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "allowScripts": {
-    "file:sdks/delivery-delivery": true
+    "file:sdks/delivery-delivery": true,
+    "file:sdks/pulumi-awsx-next-private": true
   }
 }

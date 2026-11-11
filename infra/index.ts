@@ -133,13 +133,6 @@ const listener = new aws.lb.Listener(
 
 const cluster = new aws.ecs.Cluster('cluster', {}, { provider });
 
-const deliveryRun = process.env.DELIVERY_RUN;
-// Partial Delivery identity is a configuration error, never a manual bypass.
-const isDeliveryRun = process.env.DELIVERY_PIPELINE !== undefined || deliveryRun !== undefined;
-
-if (isDeliveryRun && (!deliveryRun || !/^[1-9][0-9]*$/.test(deliveryRun))) {
-  throw new Error('Delivery requires a positive integer DELIVERY_RUN');
-}
 const organization = pulumi.getOrganization();
 const pipelineProject = 'awsx-delivery-demo-pipeline';
 const pipelineStack = 'dev';
@@ -152,13 +145,15 @@ const teamName = team.name.apply((name) => {
   if (!name) throw new Error('Delivery hook team has no name');
   return name;
 });
-const hookLambda = new privateAwsxNext.PulumiApiHook(
+const hookLambda = new privateAwsxNext.EcsDeliveryApprovalHook(
   'hook',
   {
     authentication: {
       teamOidc: { teamName },
     },
-    organization,
+    pipeline: { organization, project: pipelineProject, stack: pipelineStack },
+    checkpoint: { stageName: 'checkpoint', conditionName: 'pause-hook' },
+    manualUpdates: privateAwsxNext.ManualUpdateBehavior.BYPASS,
   },
   { provider },
 );
@@ -203,26 +198,7 @@ const service = new awsxNext.Service(
         lambdaHooks: [
           {
             lifecycleStages: [awsxNext.ProgressiveLambdaLifecycleStage.POST_TEST_TRAFFIC_SHIFT],
-            hookDetails: isDeliveryRun
-              ? {
-                  mode: 'delivery',
-                  call: {
-                    service: 'Delivery',
-                    action: 'ContinueManualGate',
-                    waitForApproval: true,
-                    parameters: {
-                      organization,
-                      project: pipelineProject,
-                      stack: pipelineStack,
-                      stage: 'checkpoint',
-                    },
-                    request: {
-                      runNumber: deliveryRun,
-                      condition: 'pause-hook',
-                    },
-                  },
-                }
-              : { mode: 'manual' },
+            hookDetails: hookLambda.hookDetails,
             functionArn: hookLambda.functionArn,
           },
         ],
