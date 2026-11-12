@@ -1,10 +1,10 @@
 import * as delivery from '@pulumi/delivery';
 import * as privateAwsxNext from '@pulumi/awsx-next-private';
 import * as pulumi from '@pulumi/pulumi';
-import { checkpointConfig } from '../shared/checkpoint.ts';
-import { deployment } from '../shared/deployment.ts';
+import { checkpointConfig } from '../shared/checkpoint';
+import { deployment } from '../shared/deployment';
 
-type AppOutputs = pulumi.Unwrap<typeof import('../infra/index.ts')>;
+type AppOutputs = pulumi.Unwrap<typeof import('../infra/index')>;
 if (checkpointConfig.completion !== privateAwsxNext.EcsCheckpointCompletion.AUTOMATED_TEST) {
   throw new Error('This pipeline requires an automated test checkpoint');
 }

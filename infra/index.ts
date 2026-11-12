@@ -6,8 +6,8 @@ import * as aws from '@pulumi/aws';
 import * as awsxNext from '@pulumi/awsx-next';
 import * as privateAwsxNext from '@pulumi/awsx-next-private';
 import * as ccapi from '@pulumi/aws-native';
-import { checkpointConfig } from '../shared/checkpoint.ts';
-import { deployment } from '../shared/deployment.ts';
+import { checkpointConfig } from '../shared/checkpoint';
+import { deployment } from '../shared/deployment';
 
 const ccapiProvider = new ccapi.Provider('aws-native', {
   region: deployment.region,
