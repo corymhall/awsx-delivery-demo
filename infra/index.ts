@@ -7,6 +7,14 @@ import * as awsxNext from '@pulumi/awsx-next';
 import * as privateAwsxNext from '@pulumi/awsx-next-private';
 import * as ccapi from '@pulumi/aws-native';
 
+const checkpointConfig: {
+  stageName: string;
+  conditionName: string;
+  completion: privateAwsxNext.EcsCheckpointCompletion;
+  testHeaderName: string;
+  testHeaderValue: string;
+} = require('../shared/checkpoint.json');
+
 const ccapiProvider = new ccapi.Provider('aws-native', {
   region: 'us-east-2',
   defaultTags: {
@@ -152,7 +160,11 @@ const hookLambda = new privateAwsxNext.EcsDeliveryApprovalHook(
       teamOidc: { teamName },
     },
     pipeline: { organization, project: pipelineProject, stack: pipelineStack },
-    checkpoint: { stageName: 'checkpoint', conditionName: 'pause-hook' },
+    checkpoint: {
+      stageName: checkpointConfig.stageName,
+      conditionName: checkpointConfig.conditionName,
+      completion: checkpointConfig.completion,
+    },
     manualUpdates: privateAwsxNext.ManualUpdateBehavior.BYPASS,
   },
   { provider },
@@ -212,6 +224,16 @@ const service = new awsxNext.Service(
           targetHealthCheck: { path: '/health' },
           listenerArn: listener.arn,
           priority: 50,
+          testTraffic: {
+            match: {
+              headers: [
+                {
+                  name: checkpointConfig.testHeaderName,
+                  values: [checkpointConfig.testHeaderValue],
+                },
+              ],
+            },
+          },
         },
       },
     },
@@ -224,3 +246,4 @@ const service = new awsxNext.Service(
 export const ecsCluster = cluster.arn;
 export const ecsService = service.serviceName;
 export const ecsTaskDefinition = task.taskDefinitionArn;
+export const testUrl = pulumi.interpolate`http://${alb.dnsName}`;
