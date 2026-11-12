@@ -35,10 +35,13 @@ Commands run from the repository root:
 - `mise run format:check` checks formatting without changing files.
 - `mise run lint` runs Oxlint.
 - `mise run typecheck` checks TypeScript.
-- `mise run validate` runs all checks, including hk configuration validation.
+- `mise run validate` checks formatting, lint, and types for both projects in parallel,
+  along with hk configuration.
 - `mise deps` explicitly installs stale npm dependencies.
 
-Git pre-commit and pre-push hooks run the same non-mutating validation.
+Git pre-commit and pre-push hooks run the same non-mutating validation. Pulumi uses
+`tsconfig.pulumi.json` to transpile without typechecking, so the separate typechecks
+must pass before changes are pushed.
 Hook installation is local to this checkout unless hk is already installed
 globally, in which case hk reuses the existing global hooks.
 No task or hook runs Pulumi operations.

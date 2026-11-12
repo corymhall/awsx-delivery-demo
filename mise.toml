@@ -5,6 +5,8 @@ lockfile_platforms = ["linux-x64", "macos-arm64", "macos-x64"]
 
 [env]
 HK_MISE = "1"
+PULUMI_OPTION_REFRESH = "true"
+PULUMI_RUN_PROGRAM = "true"
 
 [tools]
 node = "24.22.2"
@@ -36,13 +38,28 @@ description = "Type-check infrastructure TypeScript"
 dir = "infra"
 run = "npm run typecheck"
 
+[tasks."pipeline:format:check"]
+description = "Check pipeline formatting"
+dir = "pipeline"
+run = "npm run format:check"
+
+[tasks."pipeline:lint"]
+description = "Lint pipeline TypeScript"
+dir = "pipeline"
+run = "npm run lint"
+
+[tasks."pipeline:typecheck"]
+description = "Type-check pipeline TypeScript"
+dir = "pipeline"
+run = "npm run typecheck"
+
 [tasks."check:hooks"]
 description = "Validate the hk configuration"
 run = "hk config dump >/dev/null"
 
 [tasks.validate]
 description = "Run all repository checks"
-depends = ["format:check", "lint", "typecheck", "check:hooks"]
+depends = ["format:check", "lint", "typecheck", "pipeline:format:check", "pipeline:lint", "pipeline:typecheck", "check:hooks"]
 
 [tasks."hooks:install"]
 description = "Install repository Git hooks through mise"
