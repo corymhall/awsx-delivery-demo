@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "rootDir": ".",
+    "rootDir": "..",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "strict": true,
     "outDir": "bin",
     "target": "es2022",

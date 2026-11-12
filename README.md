@@ -6,8 +6,9 @@ integration tests before production traffic shifts. ECS signals the checkpoint a
 the existing load balancer listener. The hook holds the deployment until the test
 stage succeeds, then a separate Job verifies the ECS deployment.
 
-`shared/checkpoint.json` configures the checkpoint and test routing for both Pulumi
-programs. The test header selects a route, it is not authentication. This demo's
+`shared/checkpoint.ts` configures the checkpoint and test routing for both Pulumi
+programs. `shared/deployment.ts` holds their shared deployment identifiers. Project
+names must also match the names in the respective `Pulumi.yaml` files. The test header selects a route, it is not authentication. This demo's
 load balancer is public, so do not use this setup for sensitive test endpoints
 without additional access controls. Manual updates explicitly bypass the Delivery
 checkpoint.

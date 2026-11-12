@@ -6,32 +6,26 @@ import * as aws from '@pulumi/aws';
 import * as awsxNext from '@pulumi/awsx-next';
 import * as privateAwsxNext from '@pulumi/awsx-next-private';
 import * as ccapi from '@pulumi/aws-native';
-
-const checkpointConfig: {
-  stageName: string;
-  conditionName: string;
-  completion: privateAwsxNext.EcsCheckpointCompletion;
-  testHeaderName: string;
-  testHeaderValue: string;
-} = require('../shared/checkpoint.json');
+import { checkpointConfig } from '../shared/checkpoint.ts';
+import { deployment } from '../shared/deployment.ts';
 
 const ccapiProvider = new ccapi.Provider('aws-native', {
-  region: 'us-east-2',
+  region: deployment.region,
   defaultTags: {
     tags: {
-      'delivery:app': 'awsx-delivery-demo',
-      'delivery:environment': 'dev',
+      'delivery:app': deployment.app.project,
+      'delivery:environment': deployment.app.stack,
       owner: 'chall',
     },
   },
 });
 
 const provider = new aws.Provider('aws', {
-  region: 'us-east-2',
+  region: deployment.region,
   defaultTags: {
     tags: {
-      'delivery:app': 'awsx-delivery-demo',
-      'delivery:environment': 'dev',
+      'delivery:app': deployment.app.project,
+      'delivery:environment': deployment.app.stack,
       owner: 'chall',
     },
   },
@@ -142,8 +136,8 @@ const listener = new aws.lb.Listener(
 const cluster = new aws.ecs.Cluster('cluster', {}, { provider });
 
 const organization = pulumi.getOrganization();
-const pipelineProject = 'awsx-delivery-demo-pipeline';
-const pipelineStack = 'dev';
+const pipelineProject = deployment.pipeline.project;
+const pipelineStack = deployment.pipeline.stack;
 const team = new pulumiservice.Team('delivery-hooks', {
   organizationName: organization,
   name: 'awsx-delivery-demo-hooks',
