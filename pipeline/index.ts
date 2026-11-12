@@ -32,6 +32,10 @@ const stacks = new delivery.Stacks('dev', {
       stack: `${pulumi.getOrganization()}/${deployment.app.project}/${deployment.app.stack}`,
       source: app,
       directory: deployment.app.directory,
+      environment: {
+        PULUMI_OPTION_REFRESH: 'true',
+        PULUMI_RUN_PROGRAM: 'true',
+      },
     },
   },
 });
