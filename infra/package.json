@@ -15,7 +15,7 @@
     "@pulumi/awsx": "^3.12.0",
     "@pulumi/awsx-next": "file:sdks/pulumi-awsx-next",
     "@pulumi/awsx-next-private": "file:sdks/pulumi-awsx-next-private",
-    "@pulumi/pulumi": "^3.274.0",
+    "@pulumi/pulumi": "^3.275.0",
     "@pulumi/pulumiservice": "^1.7.0"
   },
   "devDependencies": {

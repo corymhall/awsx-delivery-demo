@@ -12,7 +12,7 @@
   "dependencies": {
     "@pulumi/awsx-next-private": "file:sdks/pulumi-awsx-next-private",
     "@pulumi/delivery": "file:sdks/delivery-delivery",
-    "@pulumi/pulumi": "^3.274.0"
+    "@pulumi/pulumi": "^3.275.0"
   },
   "devDependencies": {
     "@types/node": "^24",
