@@ -13,6 +13,12 @@ load balancer is public, so do not use this setup for sensitive test endpoints
 without additional access controls. Manual updates explicitly bypass the Delivery
 checkpoint.
 
+The `identity` project owns the hook's execution role, Pulumi team, issuer, and
+pipeline permission. Its stack is managed locally, outside Delivery. Deploy it
+before the app stack. The app's update identity needs permission to read its outputs
+and manage an inline policy on the execution role. The hook component owns the policy
+and scopes its log permissions to the log group it creates.
+
 To run the integration tests against an endpoint yourself, set `TEST_URL`,
 `TEST_HEADER_NAME`, and `TEST_HEADER_VALUE`, then run
 `node --test infra/test/integration.test.ts` with Node 24. The test route is available during a
@@ -25,6 +31,7 @@ Install [mise](https://mise.jdx.dev/), then run:
 ```sh
 mise trust
 mise install
+npm ci --prefix identity
 mise run hooks:install
 mise run validate
 ```
@@ -35,7 +42,7 @@ Commands run from the repository root:
 - `mise run format:check` checks formatting without changing files.
 - `mise run lint` runs Oxlint.
 - `mise run typecheck` checks TypeScript.
-- `mise run validate` checks formatting, lint, and types for both projects in parallel,
+- `mise run validate` checks formatting, lint, and types for all three projects in parallel,
   along with hk configuration.
 - `mise deps` explicitly installs stale npm dependencies.
 

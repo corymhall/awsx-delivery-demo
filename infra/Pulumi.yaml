@@ -6,5 +6,5 @@ runtime:
     packagemanager: npm
     tsconfig: tsconfig.pulumi.json
 packages:
-  awsx-next-private: github.com/corymhall/awsx-next-private@5610e4fd869d60c7ca533d70e87f32ee644a1a95
-  awsx-next: github.com/pulumi/pulumi-awsx.git/awsx-next@f73137d
+  awsx-next-private: github.com/corymhall/awsx-next-private@9ba95ea52c3b4430138cf634af955d0580766971
+  awsx-next: github.com/pulumi/pulumi-awsx.git/awsx-next@91fed6499907afb2e3983700e641a5b4b08d471f

@@ -1,0 +1,7 @@
+name: awsx-delivery-demo-identity
+description: Locally managed identity for the AWSX delivery demo
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    tsconfig: tsconfig.pulumi.json

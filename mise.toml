@@ -53,13 +53,28 @@ description = "Type-check pipeline TypeScript"
 dir = "pipeline"
 run = "npm run typecheck"
 
+[tasks."identity:format:check"]
+description = "Check identity project formatting"
+dir = "identity"
+run = "npm run format:check"
+
+[tasks."identity:lint"]
+description = "Lint identity project TypeScript"
+dir = "identity"
+run = "npm run lint"
+
+[tasks."identity:typecheck"]
+description = "Type-check identity project TypeScript"
+dir = "identity"
+run = "npm run typecheck"
+
 [tasks."check:hooks"]
 description = "Validate the hk configuration"
 run = "hk config dump >/dev/null"
 
 [tasks.validate]
 description = "Run all repository checks"
-depends = ["format:check", "lint", "typecheck", "pipeline:format:check", "pipeline:lint", "pipeline:typecheck", "check:hooks"]
+depends = ["format:check", "lint", "typecheck", "pipeline:format:check", "pipeline:lint", "pipeline:typecheck", "identity:format:check", "identity:lint", "identity:typecheck", "check:hooks"]
 
 [tasks."hooks:install"]
 description = "Install repository Git hooks through mise"

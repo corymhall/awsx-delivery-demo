@@ -1,6 +1,5 @@
 import * as path from 'path';
 import * as pulumi from '@pulumi/pulumi';
-import * as pulumiservice from '@pulumi/pulumiservice';
 import * as awsx from '@pulumi/awsx';
 import * as aws from '@pulumi/aws';
 import * as awsxNext from '@pulumi/awsx-next';
@@ -138,15 +137,11 @@ const cluster = new aws.ecs.Cluster('cluster', {}, { provider });
 const organization = pulumi.getOrganization();
 const pipelineProject = deployment.pipeline.project;
 const pipelineStack = deployment.pipeline.stack;
-const team = new pulumiservice.Team('delivery-hooks', {
-  organizationName: organization,
-  name: 'awsx-delivery-demo-hooks',
-  teamType: 'pulumi',
-});
-const teamName = team.name.apply((name) => {
-  if (!name) throw new Error('Delivery hook team has no name');
-  return name;
-});
+const identity = new pulumi.StackReference(
+  `${organization}/${deployment.identity.project}/${deployment.identity.stack}`,
+);
+const teamName = identity.requireOutput('teamName');
+const executionRoleArn = identity.requireOutput('executionRoleArn');
 const hookLambda = new privateAwsxNext.EcsDeliveryApprovalHook(
   'hook',
   {
@@ -154,6 +149,7 @@ const hookLambda = new privateAwsxNext.EcsDeliveryApprovalHook(
       teamOidc: { teamName },
     },
     pipeline: { organization, project: pipelineProject, stack: pipelineStack },
+    executionRoleArn,
     checkpoint: {
       stageName: checkpointConfig.stageName,
       conditionName: checkpointConfig.conditionName,
@@ -163,33 +159,6 @@ const hookLambda = new privateAwsxNext.EcsDeliveryApprovalHook(
   },
   { provider },
 );
-
-// Account-wide outbound federation must already be enabled. Only look it up here.
-const federation = aws.iam.getOutboundWebIdentityFederationOutput({ provider });
-new pulumiservice.OidcIssuer('delivery-hook-aws', {
-  organization,
-  name: 'awsx-delivery-demo-aws',
-  url: federation.issuerIdentifier,
-  maxExpirationSeconds: 900,
-  policies: [
-    {
-      decision: pulumiservice.AuthPolicyDecision.Allow,
-      tokenType: pulumiservice.AuthPolicyTokenType.Team,
-      teamName,
-      rules: {
-        aud: `urn:pulumi:org:${organization}`,
-        sub: hookLambda.executionRoleArn,
-      },
-    },
-  ],
-});
-new pulumiservice.TeamStackPermission('delivery-hook-pipeline', {
-  organization,
-  project: pipelineProject,
-  stack: pipelineStack,
-  team: teamName,
-  permission: pulumiservice.TeamStackPermissionScope.Edit,
-});
 
 const service = new awsxNext.Service(
   'service',
