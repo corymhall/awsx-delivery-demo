@@ -168,8 +168,10 @@ const service = new awsxNext.Service(
     vpcSubnetIds: vpc.privateSubnetIds,
     waitForSteadyState: false,
     deploymentStrategy: {
-      blueGreen: {
-        bakeTimeMinutes: 2,
+      canary: {
+        canaryPercent: 10,
+        canaryBakeTimeMinutes: 10,
+        bakeTimeMinutes: 5,
         lambdaHooks: [
           {
             lifecycleStages: [awsxNext.ProgressiveLambdaLifecycleStage.POST_TEST_TRAFFIC_SHIFT],
