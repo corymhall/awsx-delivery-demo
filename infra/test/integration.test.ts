@@ -15,6 +15,6 @@ for (const path of ['/hello', '/world']) {
     assert.equal(response.status, 200);
     const body = (await response.json()) as { status: string; message: string };
     assert.equal(body.status, 'OK');
-    assert.equal(body.message, 'Hello from the new ECS deployment!!');
+    assert.equal(body.message, 'Hello from the new ECS deployment!');
   });
 }
