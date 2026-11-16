@@ -1,11 +1,11 @@
 import * as delivery from '@pulumi/delivery';
-import * as privateAwsxNext from '@pulumi/awsx-next-private';
+import * as awsxDelivery from '@pulumi/awsx-delivery';
 import * as pulumi from '@pulumi/pulumi';
 import { checkpointConfig } from '../shared/checkpoint';
 import { deployment } from '../shared/deployment';
 
 type AppOutputs = pulumi.Unwrap<typeof import('../infra/index')>;
-if (checkpointConfig.completion !== privateAwsxNext.EcsCheckpointCompletion.AUTOMATED_TEST) {
+if (checkpointConfig.completion !== awsxDelivery.EcsCheckpointCompletion.AUTOMATED_TEST) {
   throw new Error('This pipeline requires an automated test checkpoint');
 }
 
@@ -42,19 +42,23 @@ const stacks = new delivery.Stacks('dev', {
 
 const appOutputs = stacks.outputs.app as pulumi.Output<AppOutputs>;
 
-new privateAwsxNext.EcsDeploymentCheckpoint(checkpointConfig.stageName, {
-  pipelineUrn: pipeline.urn,
-  upstreamStageUrn: dev.urn,
-  sourceUrn: app.urn,
-  serviceArn: appOutputs.ecsServiceArn,
-  taskDefinitionArn: appOutputs.ecsTaskDefinition,
-  environment: deployment.app.environment,
-  automatedTest: {
-    command: `node --test ${deployment.app.directory}/test/integration.test.ts`,
-    environment: {
-      TEST_URL: appOutputs.testUrl,
-      TEST_HEADER_NAME: checkpointConfig.testHeaderName,
-      TEST_HEADER_VALUE: checkpointConfig.testHeaderValue,
+new awsxDelivery.EcsDeploymentCheckpoint(
+  checkpointConfig.stageName,
+  {
+    pipelineUrn: pipeline.urn,
+    upstreamStageUrn: dev.urn,
+    sourceUrn: app.urn,
+    serviceArn: appOutputs.ecsServiceArn,
+    taskDefinitionArn: appOutputs.ecsTaskDefinition,
+    environment: deployment.app.environment,
+    automatedTest: {
+      command: `node --test ${deployment.app.directory}/test/integration.test.ts`,
+      environment: {
+        TEST_URL: appOutputs.testUrl,
+        TEST_HEADER_NAME: checkpointConfig.testHeaderName,
+        TEST_HEADER_VALUE: checkpointConfig.testHeaderValue,
+      },
     },
   },
-});
+  { aliases: [{ type: 'awsx-next-private:index:EcsDeploymentCheckpoint' }] },
+);

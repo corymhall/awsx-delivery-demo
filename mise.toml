@@ -72,9 +72,14 @@ run = "npm run typecheck"
 description = "Validate the hk configuration"
 run = "hk config dump >/dev/null"
 
+[tasks."components:check"]
+description = "Check experimental Delivery components and Lambda"
+dir = "components/awsx-delivery"
+run = "npm run check"
+
 [tasks.validate]
 description = "Run all repository checks"
-depends = ["format:check", "lint", "typecheck", "pipeline:format:check", "pipeline:lint", "pipeline:typecheck", "identity:format:check", "identity:lint", "identity:typecheck", "check:hooks"]
+depends = ["format:check", "lint", "typecheck", "pipeline:format:check", "pipeline:lint", "pipeline:typecheck", "identity:format:check", "identity:lint", "identity:typecheck", "components:check", "check:hooks"]
 
 [tasks."hooks:install"]
 description = "Install repository Git hooks through mise"

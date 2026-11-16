@@ -3,7 +3,7 @@ import * as pulumi from '@pulumi/pulumi';
 import * as awsx from '@pulumi/awsx';
 import * as aws from '@pulumi/aws';
 import * as awsxNext from '@pulumi/awsx-next';
-import * as privateAwsxNext from '@pulumi/awsx-next-private';
+import * as awsxDelivery from '@pulumi/awsx-delivery';
 import * as ccapi from '@pulumi/aws-native';
 import { checkpointConfig } from '../shared/checkpoint';
 import { deployment } from '../shared/deployment';
@@ -140,7 +140,7 @@ const identity = new pulumi.StackReference(
 );
 const teamName = identity.requireOutput('teamName');
 const executionRoleArn = identity.requireOutput('executionRoleArn');
-const hookLambda = new privateAwsxNext.EcsDeliveryApprovalHook(
+const hookLambda = new awsxDelivery.EcsDeliveryApprovalHook(
   'hook',
   {
     authentication: {
@@ -152,9 +152,9 @@ const hookLambda = new privateAwsxNext.EcsDeliveryApprovalHook(
       stageName: checkpointConfig.stageName,
       completion: checkpointConfig.completion,
     },
-    manualUpdates: privateAwsxNext.ManualUpdateBehavior.BYPASS,
+    manualUpdates: awsxDelivery.ManualUpdateBehavior.BYPASS,
   },
-  { provider },
+  { provider, aliases: [{ type: 'awsx-next-private:index:EcsDeliveryApprovalHook' }] },
 );
 
 const service = new awsxNext.Service(

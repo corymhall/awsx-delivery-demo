@@ -13,8 +13,8 @@
     "@pulumi/aws": "^7.53.0",
     "@pulumi/aws-native": "^1.85.0",
     "@pulumi/awsx": "^3.12.0",
+    "@pulumi/awsx-delivery": "file:sdks/pulumi-awsx-delivery",
     "@pulumi/awsx-next": "file:sdks/pulumi-awsx-next",
-    "@pulumi/awsx-next-private": "file:sdks/pulumi-awsx-next-private",
     "@pulumi/pulumi": "^3.275.0"
   },
   "devDependencies": {
@@ -25,7 +25,7 @@
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "allowScripts": {
-    "file:sdks/pulumi-awsx-next": true,
-    "file:sdks/pulumi-awsx-next-private": true
+    "file:sdks/pulumi-awsx-delivery": true,
+    "file:sdks/pulumi-awsx-next": true
   }
 }
