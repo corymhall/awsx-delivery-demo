@@ -135,8 +135,6 @@ const listener = new aws.lb.Listener(
 const cluster = new aws.ecs.Cluster('cluster', {}, { provider });
 
 const organization = pulumi.getOrganization();
-const pipelineProject = deployment.pipeline.project;
-const pipelineStack = deployment.pipeline.stack;
 const identity = new pulumi.StackReference(
   `${organization}/${deployment.identity.project}/${deployment.identity.stack}`,
 );
@@ -148,11 +146,10 @@ const hookLambda = new privateAwsxNext.EcsDeliveryApprovalHook(
     authentication: {
       teamOidc: { teamName },
     },
-    pipeline: { organization, project: pipelineProject, stack: pipelineStack },
+    pipelineStack: `${organization}/${deployment.pipeline.project}/${deployment.pipeline.stack}`,
     executionRoleArn,
     checkpoint: {
       stageName: checkpointConfig.stageName,
-      conditionName: checkpointConfig.conditionName,
       completion: checkpointConfig.completion,
     },
     manualUpdates: privateAwsxNext.ManualUpdateBehavior.BYPASS,
@@ -208,7 +205,6 @@ const service = new awsxNext.Service(
   },
 );
 
-export const ecsCluster = cluster.arn;
-export const ecsService = service.serviceName;
+export const ecsServiceArn = service.serviceArn;
 export const ecsTaskDefinition = task.taskDefinitionArn;
 export const testUrl = pulumi.interpolate`http://${alb.dnsName}`;

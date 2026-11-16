@@ -13,6 +13,14 @@ load balancer is public, so do not use this setup for sensitive test endpoints
 without additional access controls. Manual updates explicitly bypass the Delivery
 checkpoint.
 
+Both programs pin `awsx-next-private` to commit
+`de061f6682cdbcdd3347dbb7175f11bfa62910ba`. The hook takes the fully qualified
+`pipelineStack` name. The pipeline consumes `ecsServiceArn` from the completed app
+update, which supplies the checkpoint's service, cluster and region. The expected
+task definition remains a separate output. Both programs use the default
+`ecs-arrival` condition, and the test Job uses the default repository-root directory.
+This changes the previous `pause-hook` condition, so update both programs together.
+
 The `identity` project owns the hook's execution role, Pulumi team, issuer, and
 pipeline permission. Its stack is managed locally, outside Delivery. Deploy it
 before the app stack. The app's update identity needs permission to read its outputs

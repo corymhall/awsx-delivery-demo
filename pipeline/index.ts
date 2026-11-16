@@ -46,15 +46,11 @@ new privateAwsxNext.EcsDeploymentCheckpoint(checkpointConfig.stageName, {
   pipelineUrn: pipeline.urn,
   upstreamStageUrn: dev.urn,
   sourceUrn: app.urn,
-  conditionName: checkpointConfig.conditionName,
-  clusterArn: appOutputs.ecsCluster,
-  serviceName: appOutputs.ecsService,
+  serviceArn: appOutputs.ecsServiceArn,
   taskDefinitionArn: appOutputs.ecsTaskDefinition,
-  region: deployment.region,
   environment: deployment.app.environment,
   automatedTest: {
-    command: 'node --test test/integration.test.ts',
-    directory: deployment.app.directory,
+    command: `node --test ${deployment.app.directory}/test/integration.test.ts`,
     environment: {
       TEST_URL: appOutputs.testUrl,
       TEST_HEADER_NAME: checkpointConfig.testHeaderName,

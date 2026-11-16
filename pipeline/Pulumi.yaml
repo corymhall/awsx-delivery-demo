@@ -7,4 +7,4 @@ runtime:
     tsconfig: tsconfig.pulumi.json
 packages:
   delivery: pulumi/pulumi/delivery@0.0.1-alpha.5
-  awsx-next-private: github.com/corymhall/awsx-next-private@9ba95ea52c3b4430138cf634af955d0580766971
+  awsx-next-private: github.com/corymhall/awsx-next-private@de061f6682cdbcdd3347dbb7175f11bfa62910ba
