@@ -5,8 +5,8 @@ lockfile_platforms = ["linux-x64", "macos-arm64", "macos-x64"]
 
 [env]
 HK_MISE = "1"
-PULUMI_OPTION_REFRESH = "true"
-PULUMI_RUN_PROGRAM = "true"
+# PULUMI_OPTION_REFRESH = "true"
+# PULUMI_RUN_PROGRAM = "true"
 
 [tools]
 node = "24.22.2"
