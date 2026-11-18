@@ -41,7 +41,7 @@ npm --prefix pipeline run format
 npm --prefix components/awsx-delivery run format
 ```
 
-Git pre-commit and pre-push hooks run validation. The Pulumi programs use
+The Git pre-push hook runs validation. The Pulumi programs use
 `tsconfig.pulumi.json` to transpile without typechecking, so run validation before
 pushing changes. Schema checks load the component plugin but do not deploy resources.
 
