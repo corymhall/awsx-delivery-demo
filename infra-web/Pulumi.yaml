@@ -3,5 +3,6 @@ runtime:
   name: nodejs
   options:
     packagemanager: npm
+    tsconfig: tsconfig.pulumi.json
 packages:
-  awsx-next: github.com/pulumi/pulumi-awsx.git/awsx-next@3e6da8bd8e28146f81a4aa4fd17ff23e308cf679
+  awsx-next: github.com/pulumi/pulumi-awsx.git/awsx-next@33f0f464ba97fc2d3bd8d0e97630e76f6963affe

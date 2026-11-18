@@ -1,11 +1,18 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "Node16",
+    "rootDir": "..",
     "strict": true,
-    "esModuleInterop": true,
-    "allowImportingTsExtensions": true,
-    "skipLibCheck": true
+    "outDir": "bin",
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "pretty": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true,
+    "rewriteRelativeImportExtensions": true
   },
   "include": [
     "index.ts",

@@ -21,7 +21,7 @@ run = "npm ci"
 [deps.infra-web]
 dir = "infra-web"
 auto = true
-sources = ["Pulumi.yaml", "tsconfig.json", "package.json", "package-lock.json"]
+sources = ["Pulumi.yaml", "tsconfig.json", "tsconfig.pulumi.json", "package.json", "package-lock.json"]
 outputs = ["node_modules", "sdks/pulumi-awsx-next"]
 run = "pulumi install --non-interactive"
 

@@ -1,15 +1,19 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
     "rootDir": "..",
-    "module": "Node16",
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true
+    "outDir": "bin",
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "pretty": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": [
-    "index.ts",
-    "scripts/**/*.ts",
-    "../shared/web.ts"
+  "files": [
+    "index.ts"
   ]
 }
