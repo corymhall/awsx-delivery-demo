@@ -123,14 +123,7 @@ export class EcsDeploymentCheckpoint extends pulumi.ComponentResource {
     args: EcsDeploymentCheckpointArgs,
     opts?: pulumi.ComponentResourceOptions,
   ) {
-    super(
-      'awsx-delivery:index:EcsDeploymentCheckpoint',
-      name,
-      {},
-      pulumi.mergeOptions(opts, {
-        aliases: [{ type: 'awsx-next-private:index:EcsDeploymentCheckpoint' }],
-      }),
-    );
+    super('awsx-delivery:index:EcsDeploymentCheckpoint', name, {}, opts);
     if (args.approval && args.automatedTest) {
       throw new Error('Specify either approval or automatedTest, not both');
     }

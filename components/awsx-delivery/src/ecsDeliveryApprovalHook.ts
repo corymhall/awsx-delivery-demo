@@ -183,14 +183,7 @@ export class EcsDeliveryApprovalHook extends pulumi.ComponentResource {
     args: EcsDeliveryApprovalHookArgs,
     opts?: pulumi.ComponentResourceOptions,
   ) {
-    super(
-      'awsx-delivery:index:EcsDeliveryApprovalHook',
-      name,
-      {},
-      pulumi.mergeOptions(opts, {
-        aliases: [{ type: 'awsx-next-private:index:EcsDeliveryApprovalHook' }],
-      }),
-    );
+    super('awsx-delivery:index:EcsDeliveryApprovalHook', name, {}, opts);
     const pipeline = process.env.DELIVERY_PIPELINE;
     const run = process.env.DELIVERY_RUN;
     const isDelivery = pipeline !== undefined || run !== undefined;

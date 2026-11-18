@@ -11,12 +11,12 @@ PULUMI_RUN_PROGRAM = "true"
 [tools]
 node = "24.22.2"
 hk = "1.51.0"
-pulumi = "3.273.0"
+pulumi = "3.277.0"
 
 [deps.npm]
 dir = "infra"
 auto = true
-run = "rm -rf sdks/delivery-delivery/bin && npm ci"
+run = "npm ci"
 
 [tasks.format]
 description = "Format infrastructure files"

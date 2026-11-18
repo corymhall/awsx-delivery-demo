@@ -14,7 +14,6 @@ export const deployment = {
   pipeline: {
     project: 'awsx-delivery-demo-pipeline',
     stack: 'dev',
-    directory: 'pipeline',
     repository: 'corymhall/awsx-delivery-demo',
     branch: 'main',
   },

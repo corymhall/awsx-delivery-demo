@@ -2,7 +2,6 @@ import * as path from 'path';
 import * as pulumi from '@pulumi/pulumi';
 import * as awsx from '@pulumi/awsx';
 import * as aws from '@pulumi/aws';
-import * as awsxNext from '@pulumi/awsx-next';
 import * as awsxDelivery from '@pulumi/awsx-delivery';
 import * as ccapi from '@pulumi/aws-native';
 import { checkpointConfig } from '../shared/checkpoint';
@@ -59,10 +58,10 @@ const image = new awsx.ecr.Image(
   { provider },
 );
 
-const task = new awsxNext.TaskDefinition(
+const task = new awsx.ecs.TaskDefinition(
   'task',
   {
-    cpuArchitecture: awsxNext.CpuArchitecture.ARM64,
+    cpuArchitecture: awsx.ecs.CpuArchitecture.ARM64,
     containers: {
       app: {
         image: image.imageUri,
@@ -154,10 +153,10 @@ const hookLambda = new awsxDelivery.EcsDeliveryApprovalHook(
     },
     manualUpdates: awsxDelivery.ManualUpdateBehavior.BYPASS,
   },
-  { provider, aliases: [{ type: 'awsx-next-private:index:EcsDeliveryApprovalHook' }] },
+  { provider },
 );
 
-const service = new awsxNext.Service(
+const service = new awsx.ecs.Service(
   'service',
   {
     taskDefinitionArn: task.taskDefinitionArn,
@@ -171,7 +170,7 @@ const service = new awsxNext.Service(
         bakeTimeMinutes: 5,
         lambdaHooks: [
           {
-            lifecycleStages: [awsxNext.ProgressiveLambdaLifecycleStage.POST_TEST_TRAFFIC_SHIFT],
+            lifecycleStages: [awsx.ecs.ProgressiveLambdaLifecycleStage.POST_TEST_TRAFFIC_SHIFT],
             hookDetails: hookLambda.hookDetails,
             functionArn: hookLambda.functionArn,
           },
@@ -200,9 +199,7 @@ const service = new awsxNext.Service(
       },
     },
   },
-  {
-    providers: [provider, ccapiProvider],
-  },
+  { providers },
 );
 
 export const ecsServiceArn = service.serviceArn;

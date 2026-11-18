@@ -15,12 +15,7 @@ const app = new delivery.GitHubSource('app', {
   trigger: true,
 });
 
-const pipeline = new delivery.Pipeline('demo', {
-  program: {
-    directory: deployment.pipeline.directory,
-    source: app,
-  },
-});
+const pipeline = new delivery.Pipeline('demo');
 
 const dev = new delivery.Stage('dev', {
   pipeline,
@@ -42,23 +37,19 @@ const stacks = new delivery.Stacks('dev', {
 
 const appOutputs = stacks.outputs.app as pulumi.Output<AppOutputs>;
 
-new awsxDelivery.EcsDeploymentCheckpoint(
-  checkpointConfig.stageName,
-  {
-    pipelineUrn: pipeline.urn,
-    upstreamStageUrn: dev.urn,
-    sourceUrn: app.urn,
-    serviceArn: appOutputs.ecsServiceArn,
-    taskDefinitionArn: appOutputs.ecsTaskDefinition,
-    environment: deployment.app.environment,
-    automatedTest: {
-      command: `node --test ${deployment.app.directory}/test/integration.test.ts`,
-      environment: {
-        TEST_URL: appOutputs.testUrl,
-        TEST_HEADER_NAME: checkpointConfig.testHeaderName,
-        TEST_HEADER_VALUE: checkpointConfig.testHeaderValue,
-      },
+new awsxDelivery.EcsDeploymentCheckpoint(checkpointConfig.stageName, {
+  pipelineUrn: pipeline.urn,
+  upstreamStageUrn: dev.urn,
+  sourceUrn: app.urn,
+  serviceArn: appOutputs.ecsServiceArn,
+  taskDefinitionArn: appOutputs.ecsTaskDefinition,
+  environment: deployment.app.environment,
+  automatedTest: {
+    command: `node --test ${deployment.app.directory}/test/integration.test.ts`,
+    environment: {
+      TEST_URL: appOutputs.testUrl,
+      TEST_HEADER_NAME: checkpointConfig.testHeaderName,
+      TEST_HEADER_VALUE: checkpointConfig.testHeaderValue,
     },
   },
-  { aliases: [{ type: 'awsx-next-private:index:EcsDeploymentCheckpoint' }] },
-);
+});

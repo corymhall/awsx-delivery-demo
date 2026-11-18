@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@pulumi/awsx-delivery": "file:sdks/pulumi-awsx-delivery",
-    "@pulumi/delivery": "file:sdks/delivery-delivery",
+    "@pulumi/delivery": "0.1.0-beta.1",
     "@pulumi/pulumi": "^3.275.0"
   },
   "devDependencies": {
@@ -22,7 +22,6 @@
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "allowScripts": {
-    "file:sdks/delivery-delivery": true,
     "file:sdks/pulumi-awsx-delivery": true
   }
 }

@@ -20,7 +20,7 @@ pulumi.runtime.setMocks(
 
 test('unknown discovery creates neither checkpoint resources nor a no-op continuation', async () => {
   const source = new delivery.GitHubSource('source', { repository: 'acme/app', branch: 'main' });
-  const pipeline = new delivery.Pipeline('app', { program: { directory: '.', source } });
+  const pipeline = new delivery.Pipeline('app');
   const upstream = new delivery.Stage('infra', { pipeline });
   const component = new EcsDeploymentCheckpoint('checkpoint', {
     pipelineUrn: pipeline.urn,

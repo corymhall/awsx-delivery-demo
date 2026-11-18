@@ -4,7 +4,7 @@ Experimental source-based Pulumi package for this demo, separate from public AWS
 
 - Export component classes explicitly from `index.ts`.
 - Keep schema-compatible inputs and outputs and constructors shaped as `(name, args, opts?)`.
-- Use `awsx-delivery` resource tokens. Preserve aliases for `awsx-next-private` types.
+- Use `awsx-delivery` resource tokens.
 - Keep `index.ts` CommonJS-compatible and unbundled for schema inference.
 - Declare Pulumi package dependencies in `PulumiPlugin.yaml`. Do not vendor generated SDKs.
 - The Lambda in `functions/pulumi-api-hook` has separate dependencies, tests, and a bundled artifact.

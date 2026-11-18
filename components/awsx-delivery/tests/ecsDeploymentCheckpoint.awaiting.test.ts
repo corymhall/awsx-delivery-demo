@@ -21,7 +21,7 @@ pulumi.runtime.setMocks(
 
 test('an awaiting discovery during an update preserves unknown outputs without creating a checkpoint or bypass', async () => {
   const source = new delivery.GitHubSource('source', { repository: 'acme/app', branch: 'main' });
-  const pipeline = new delivery.Pipeline('app', { program: { directory: '.', source } });
+  const pipeline = new delivery.Pipeline('app');
   const upstream = new delivery.Stage('infra', { pipeline });
   const component = new EcsDeploymentCheckpoint('checkpoint', {
     pipelineUrn: pipeline.urn,

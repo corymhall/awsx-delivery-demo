@@ -71,14 +71,7 @@ export class PulumiApiHook extends pulumi.ComponentResource {
   public readonly executionRoleArn: pulumi.Output<string>;
 
   constructor(name: string, args: PulumiApiHookArgs, opts?: pulumi.ComponentResourceOptions) {
-    super(
-      'awsx-delivery:index:PulumiApiHook',
-      name,
-      {},
-      pulumi.mergeOptions(opts, {
-        aliases: [{ type: 'awsx-next-private:index:PulumiApiHook' }],
-      }),
-    );
+    super('awsx-delivery:index:PulumiApiHook', name, {}, opts);
 
     const bundlePath = path.join(__dirname, '../functions/pulumi-api-hook/dist/index.js');
     if (!fs.existsSync(bundlePath)) {

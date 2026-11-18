@@ -1,3 +1,1 @@
 runtime: nodejs
-packages:
-  delivery: pulumi/pulumi/delivery@0.0.1-alpha.5

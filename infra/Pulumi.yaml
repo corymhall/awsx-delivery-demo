@@ -7,4 +7,3 @@ runtime:
     tsconfig: tsconfig.pulumi.json
 packages:
   awsx-delivery: ../components/awsx-delivery
-  awsx-next: github.com/pulumi/pulumi-awsx.git/awsx-next@5baed169f40dd6bd9fe9621c17590d5a920dc3ee

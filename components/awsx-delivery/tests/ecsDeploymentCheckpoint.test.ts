@@ -39,7 +39,7 @@ function resolve<T>(value: pulumi.Output<T>): Promise<T> {
 }
 
 const source = new delivery.GitHubSource('source', { repository: 'acme/app', branch: 'main' });
-const pipeline = new delivery.Pipeline('app', { program: { directory: '.', source } });
+const pipeline = new delivery.Pipeline('app');
 const upstream = new delivery.Stage('infra', { pipeline });
 
 /**

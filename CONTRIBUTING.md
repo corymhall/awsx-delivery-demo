@@ -3,7 +3,7 @@
 ## Install dependencies
 
 Install [mise](https://mise.jdx.dev/) and run these commands from the repository root.
-Pulumi must have access to the preview Delivery package.
+The pipeline and local component package use the published `@pulumi/delivery` SDK.
 
 ```sh
 mise trust
@@ -17,7 +17,6 @@ mise run validate
 ```
 
 `pulumi install` generates the SDKs declared in each project's package manifest.
-The component package declares its own Delivery dependency in `PulumiPlugin.yaml`.
 Its npm `prepare` script installs and builds the standalone Lambda.
 
 These commands install dependencies and run checks. They do not deploy the demo.
@@ -59,20 +58,6 @@ mise run validate
 For component-only checks, run `npm --prefix components/awsx-delivery run check`.
 Do not commit generated SDKs, installed dependencies, or Lambda build output.
 
-### Recover from a Delivery SDK rebuild error
-
-The generated preview Delivery SDK can fail a repeated npm install with `TS5055`
-errors about overwriting files in `bin`. Delete only that SDK's generated `bin`
-directory before retrying the failed command. For the pipeline:
-
-```sh
-rm -rf pipeline/sdks/delivery-delivery/bin
-pulumi package add ../components/awsx-delivery --cwd pipeline
-```
-
-For an error in the component package, the corresponding directory is
-`components/awsx-delivery/sdks/delivery-delivery/bin`.
-
 ## Update demo settings
 
 Edit `shared/deployment.ts` for repository, Region, stack, and ESC environment
@@ -83,6 +68,14 @@ application and pipeline. Update both consumers together when those settings cha
 Deploy the identity stack before the application stack. The application reads the
 identity stack's outputs and attaches an inline policy to the hook's execution role.
 The application update identity needs permission for both operations.
+
+## Register the Delivery pipeline
+
+With a Pulumi CLI that supports Delivery, run
+`pulumi delivery register --cwd pipeline --stack dev` from a clean checkout of a
+commit pushed to the tracked branch. Delivery reads the pipeline program location
+from `delivery:source` in the pipeline stack config. Registration writes this setting
+if it is missing. Commit the updated stack config after registration.
 
 ## Run the integration test against a deployment
 

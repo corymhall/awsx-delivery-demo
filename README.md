@@ -6,8 +6,9 @@ ECS lifecycle hook holds the deployment, then verifies that the deployment compl
 
 Blog walkthrough: **link pending publication**.
 
-This demo includes experimental Delivery components. Their APIs can change and
-are not part of the AWSX library. The demo creates billable AWS resources.
+The ECS service and task definition use the published AWSX v3.14.0 package.
+The experimental Delivery hook and checkpoint are local components and are not
+part of the AWSX library. The demo creates billable AWS resources.
 Its load balancer is public. The test header selects a route, not an authenticated
 endpoint. Do not expose sensitive test behavior without additional access controls.
 Direct updates outside Delivery explicitly bypass the test checkpoint.

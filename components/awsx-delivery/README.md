@@ -58,8 +58,6 @@ See the complete [application](../../infra/index.ts) and
 - [`PulumiApiHook`](src/pulumiApiHook.ts) creates the lower-level Lambda, log group, and execution policy. Its [Lambda reference](functions/pulumi-api-hook/README.md) describes the event contract and retries.
 
 Source comments define inputs, outputs, and defaults. The resource-token namespace
-is `awsx-delivery`. Components include aliases for their former
-`awsx-next-private` types. Existing consumers must also supply the old-type alias
-when constructing a renamed remote component, as the demo programs do.
+is `awsx-delivery`.
 
 See [Contributing](../../CONTRIBUTING.md) to build, test, or regenerate the package.
