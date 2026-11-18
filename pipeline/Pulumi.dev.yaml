@@ -1,2 +1,6 @@
 environment:
   - awsx-delivery-demo/dev
+config:
+  delivery:source:
+    directory: pipeline
+    url: https://github.com/corymhall/awsx-delivery-demo

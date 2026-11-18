@@ -127,7 +127,16 @@ export class EcsDeploymentCheckpoint extends pulumi.ComponentResource {
     if (args.approval && args.automatedTest) {
       throw new Error('Specify either approval or automatedTest, not both');
     }
-    const service = pulumi.output(args.serviceArn).apply(parseEcsServiceArn);
+    pulumi.log.info('ECS checkpoint: waiting for serviceArn', this);
+    const service = pulumi.output(args.serviceArn).apply((arn) => {
+      pulumi.log.info(
+        `ECS checkpoint: parsing serviceArn (present=${arn != null}, type=${typeof arn})`,
+        this,
+      );
+      const parsed = parseEcsServiceArn(arn);
+      pulumi.log.info('ECS checkpoint: parsed serviceArn', this);
+      return parsed;
+    });
     const conditionName = pulumi
       .output(args.conditionName ?? defaultEcsArrivalConditionName)
       .apply((value) => {
