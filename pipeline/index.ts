@@ -28,8 +28,8 @@ const stacks = new delivery.Stacks('dev', {
       source: app,
       directory: deployment.app.directory,
       environment: {
-        PULUMI_OPTION_REFRESH: 'true',
-        PULUMI_RUN_PROGRAM: 'true',
+        // PULUMI_OPTION_REFRESH: 'true',
+        // PULUMI_RUN_PROGRAM: 'true',
       },
     },
   },
