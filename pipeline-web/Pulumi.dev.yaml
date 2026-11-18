@@ -3,4 +3,5 @@ environment:
 config:
   delivery:source:
     directory: pipeline-web
+    branch: demo/lambda-web
     url: https://github.com/corymhall/awsx-delivery-demo
