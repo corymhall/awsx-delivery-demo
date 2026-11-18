@@ -18,6 +18,20 @@ dir = "infra"
 auto = true
 run = "npm ci"
 
+[deps.infra-web]
+dir = "infra-web"
+auto = true
+sources = ["Pulumi.yaml", "tsconfig.json", "package.json", "package-lock.json"]
+outputs = ["node_modules", "sdks/pulumi-awsx-next"]
+run = "pulumi install --non-interactive"
+
+[deps.pipeline-web]
+dir = "pipeline-web"
+auto = true
+sources = ["package.json", "package-lock.json"]
+outputs = ["node_modules"]
+run = "npm ci"
+
 [tasks.format]
 description = "Format infrastructure files"
 dir = "infra"
@@ -77,9 +91,19 @@ description = "Check experimental Delivery components and Lambda"
 dir = "components/awsx-delivery"
 run = "npm run check"
 
+[tasks."infra-web:check"]
+description = "Check Lambda Web Function infrastructure"
+dir = "infra-web"
+run = "npm run check"
+
+[tasks."pipeline-web:check"]
+description = "Check the Lambda Web Function Delivery pipeline"
+dir = "pipeline-web"
+run = "npm run check"
+
 [tasks.validate]
 description = "Run all repository checks"
-depends = ["format:check", "lint", "typecheck", "pipeline:format:check", "pipeline:lint", "pipeline:typecheck", "identity:format:check", "identity:lint", "identity:typecheck", "components:check", "check:hooks"]
+depends = ["format:check", "lint", "typecheck", "pipeline:format:check", "pipeline:lint", "pipeline:typecheck", "identity:format:check", "identity:lint", "identity:typecheck", "components:check", "check:hooks", "infra-web:check", "pipeline-web:check"]
 
 [tasks."hooks:install"]
 description = "Install repository Git hooks through mise"

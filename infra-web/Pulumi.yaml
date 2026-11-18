@@ -1,0 +1,7 @@
+name: awsx-delivery-demo-infra-web
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+packages:
+  awsx-next: github.com/pulumi/pulumi-awsx.git/awsx-next@3e6da8bd8e28146f81a4aa4fd17ff23e308cf679

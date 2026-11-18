@@ -1,0 +1,23 @@
+{
+  "name": "awsx-delivery-demo-pipeline-web",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "format": "oxfmt --write index.ts scripts",
+    "format:check": "oxfmt --check index.ts scripts",
+    "lint": "oxlint --deny-warnings index.ts scripts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run format:check && npm run lint && npm run typecheck"
+  },
+  "dependencies": {
+    "@pulumi/pulumi": "^3.275.0",
+    "@pulumi/delivery": "0.1.0-beta.1",
+    "@aws-sdk/client-lambda-web": "3.1171.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "typescript": "npm:@typescript/typescript6@6.0.2"
+  }
+}

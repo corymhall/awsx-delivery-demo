@@ -1,0 +1,5 @@
+environment:
+  - awsx-delivery-demo/dev
+config:
+  aws:region: us-east-2
+  aws-native:region: us-east-2

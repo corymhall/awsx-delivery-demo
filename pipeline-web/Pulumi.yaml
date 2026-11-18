@@ -1,0 +1,5 @@
+name: awsx-delivery-demo-pipeline-web
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
