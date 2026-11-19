@@ -3,3 +3,6 @@ environment:
 config:
   aws:region: us-east-2
   aws-native:region: us-east-2
+  awsx-delivery-demo-infra-web:releaseTag: 981bdd53fa915b9a3ab243d36285d7c7f89d458e
+  awsx-delivery-demo-infra-web:stableRevisionId: bootstrap
+  awsx-delivery-demo-infra-web:candidatePercent: "100"

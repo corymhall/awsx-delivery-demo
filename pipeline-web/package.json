@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@pulumi/pulumi": "^3.275.0",
-    "@pulumi/delivery": "0.1.0-beta.1",
+    "@pulumi/delivery": "0.2.0",
     "@aws-sdk/client-lambda-web": "3.1171.0"
   },
   "devDependencies": {

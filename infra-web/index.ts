@@ -39,13 +39,13 @@ const revisions = app.revisionId.apply((candidate) => {
 });
 
 const production = new WebFunctionEndpoint('production', {
-  functionArn: app.functionArn,
+  functionName: app.functionName,
   endpointName: web.productionEndpointName,
   authType,
   revisions,
 });
 const test = new WebFunctionEndpoint('test', {
-  functionArn: app.functionArn,
+  functionName: app.functionName,
   endpointName: 'test',
   authType,
   revisions: [{ revisionId: app.revisionId }],
