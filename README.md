@@ -13,6 +13,34 @@ Its load balancer is public. The test header selects a route, not an authenticat
 endpoint. Do not expose sensitive test behavior without additional access controls.
 Direct updates outside Delivery explicitly bypass the test checkpoint.
 
+## Lambda Web Function canary
+
+The Lambda demo uses [infra-web](infra-web/index.ts) for the function and its
+endpoints, and [pipeline-web](pipeline-web/index.ts) for the Delivery pipeline.
+The test endpoint sends requests to the candidate revision. The production
+endpoint routes traffic according to the canary stage.
+
+1. **Deploy** records the current production revision, publishes a candidate,
+   and runs the [verification script](pipeline-web/scripts/probe.ts) against
+   the test endpoint. The pipeline then waits for approval.
+
+   ![Delivery run graph with Deploy complete and Shift awaiting approval](docs/images/lambda-canary-awaiting-approval.png)
+
+2. After approval, **Shift** checks the production revision, sends a share of
+   traffic to the candidate, and runs the probe during the canary period.
+3. **Finalize** sends all traffic to the candidate if the probe passes. If the
+   probe fails or times out, Finalize restores the stable revision and reports
+   the failure.
+
+The completed run below shows a successful rollout.
+
+![Delivery run graph with Deploy, Shift, and Finalize complete](docs/images/lambda-canary-complete.png)
+
+The first deployment has no stable revision. It sends all production traffic to
+the candidate before approval and skips the traffic split and canary period.
+Run one release at a time per target. For recovery and configuration details, see
+the [Lambda Web Function canary component](components/awsx-delivery/README.md#lambda-web-function-canary).
+
 ## Repository layout
 
 - `identity/` defines the hook's identity and permissions.
