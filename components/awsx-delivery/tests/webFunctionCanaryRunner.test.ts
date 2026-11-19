@@ -77,7 +77,11 @@ function run(
       DELIVERY_COMMIT: 'source-commit',
       PATH: `${directory}:${process.env.PATH}`,
       CANARY_STACK: 'acme/dashboard/dev',
-      TEST_STACK_OUTPUTS: JSON.stringify({ functionArn, productionEndpointArn }),
+      TEST_STACK_OUTPUTS: JSON.stringify({
+        functionArn,
+        productionEndpointArn,
+        candidateRevisionId: 'next',
+      }),
       CANARY_FUNCTION_ARN: mode === 'snapshot' ? '' : functionArn,
       CANARY_PRODUCTION_ENDPOINT_ARN: productionEndpointArn,
       CANARY_CANDIDATE_REVISION_ID: 'next',
@@ -152,7 +156,10 @@ test('bootstrap reports a failed verification without scheduling a rollback', ()
 test('a healthy split produces a promote verdict and verifies full candidate routing', () => {
   expect(run('observe', { previous: 85, next: 15 }).status).toBe(0);
   expect(JSON.parse(readFileSync(outputs, 'utf8')).verdict).toBe('promote');
-  expect(run('result', { next: 100 }, { CANARY_VERDICT: 'promote' }).status).toBe(0);
+  const verdict = { CANARY_VERDICT: 'promote' };
+  expect(run('shift-result', { previous: 85, next: 15 }, verdict).status).toBe(0);
+  expect(run('shift-result', { previous: 100 }, verdict).status).toBe(1);
+  expect(run('result', { next: 100 }).status).toBe(0);
 });
 
 test.each(['exit 7', 'sleep 10'])(
@@ -163,7 +170,7 @@ test.each(['exit 7', 'sleep 10'])(
     const verdict = JSON.parse(readFileSync(outputs, 'utf8'));
     expect(verdict.verdict).toBe('restore');
     const result = run(
-      'result',
+      'shift-result',
       { previous: 100 },
       { CANARY_VERDICT: verdict.verdict, CANARY_FAILURE_REASON: verdict.reason },
     );
@@ -172,11 +179,29 @@ test.each(['exit 7', 'sleep 10'])(
   },
 );
 
+test('pre-shift rejects an approval if the published candidate or live baseline changed', () => {
+  expect(run('pre-shift', { previous: 100 }).status).toBe(0);
+  const stale = run(
+    'pre-shift',
+    { previous: 100 },
+    {
+      TEST_STACK_OUTPUTS: JSON.stringify({
+        functionArn,
+        productionEndpointArn,
+        candidateRevisionId: 'other',
+      }),
+    },
+  );
+  expect(stale.status).toBe(1);
+  expect(stale.stderr).toContain('no longer points to this release');
+  expect(run('pre-shift', { other: 100 }).stderr).toContain('Unexpected production routing');
+});
+
 test('unexpected production routing never requests a write or claims restoration', () => {
   expect(run('observe', { previous: 85, different: 15 }).status).toBe(1);
   expect(existsSync(outputs)).toBe(false);
   const result = run(
-    'result',
+    'shift-result',
     { next: 100 },
     { CANARY_VERDICT: 'restore', CANARY_FAILURE_REASON: 'check failed' },
   );

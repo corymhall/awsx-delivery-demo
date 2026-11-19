@@ -32,7 +32,17 @@ const cases = [
     ],
   },
   {
-    phase: 'finalize',
+    phase: 'reconcile',
+    stableRevisionId: 'stable',
+    candidateRevisionId: 'next',
+    candidatePercent: 15,
+    expected: [
+      { revisionId: 'stable', weight: 85 },
+      { revisionId: 'next', weight: 15 },
+    ],
+  },
+  {
+    phase: 'reconcile',
     stableRevisionId: 'stable',
     candidateRevisionId: 'next',
     candidatePercent: 0,

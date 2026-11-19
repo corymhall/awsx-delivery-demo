@@ -59,7 +59,11 @@ Full example: [application stack](../../infra/index.ts) and [pipeline](../../pip
 
 ## Lambda Web Function canary
 
-Add a canary to an existing Delivery pipeline. The rollout runs as one stage with separate jobs and stack updates:
+Add a canary to an existing Delivery pipeline. The component creates three stages:
+
+- **Deploy** snapshots production, publishes the candidate, and verifies it on the test endpoint.
+- **Shift** rechecks the baseline, shifts traffic, and runs the canary probe. On probe failure or timeout it restores stable, confirms the live weights, and fails this stage before Promote can run.
+- **Promote** moves all traffic to the candidate and confirms live routing. The component's `completionStageUrn` identifies this stage.
 
 ```ts
 import { WebFunctionCanary } from '@pulumi/awsx-delivery';
@@ -71,6 +75,7 @@ new WebFunctionCanary('dashboard', {
   awsEnvironment: 'my-org/my-app/dev',
   canaryPercent: 10,
   canaryBakeTimeMinutes: 5,
+  requireApprovalBeforeShift: true, // Optional approval gate. Default: false.
   verification: { directory: 'pipeline-web', command: 'node scripts/probe.ts' },
 });
 ```
@@ -105,7 +110,18 @@ export const productionUrl = production.url;
 export const testUrl = test.url;
 ```
 
-The verification command receives `CANARY_CANDIDATE_URL` and `CANARY_PRODUCTION_URL`. Exit nonzero to reject the candidate. Run one release at a time per target.
+The verification command receives `CANARY_CANDIDATE_URL` and `CANARY_PRODUCTION_URL`. Exit nonzero to reject the candidate.
+
+The demo enables `requireApprovalBeforeShift` in `pipeline-web/index.ts`. Shift
+requires one approval from anyone with approval permission on the pipeline. This
+requires Delivery's Approvals feature. On first deploy, there is no stable revision.
+Deploy still creates production at 100% candidate before the gate, and Shift
+skips the split and bake.
+
+Run only one release at a time per target. Delivery serializes each stage, not
+the entire rollout. If a deployment is cancelled or loses its runner while
+traffic is split, check live routing and restore the stable revision through
+the application stack before starting another release.
 
 Full example: [application stack](../../infra-web/index.ts), [pipeline](../../pipeline-web/index.ts), and [verification script](../../pipeline-web/scripts/probe.ts).
 

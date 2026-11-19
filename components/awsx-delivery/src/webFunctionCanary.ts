@@ -73,6 +73,11 @@ export interface WebFunctionCanaryArgs {
    * Minimum minutes at the canary split before promotion. Default: 5.
    */
   canaryBakeTimeMinutes?: pulumi.Input<number>;
+  /**
+   * Require one approval before shifting production traffic. Requires Delivery's Approvals feature.
+   * Default: false. This does not gate creation of the production endpoint on the first release.
+   */
+  requireApprovalBeforeShift?: boolean;
 }
 
 /**
@@ -97,12 +102,28 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
       .apply((urn) =>
         getDeliverySource(`${name}-source-reference`, urn),
       ) as unknown as delivery.JobArgs['source'];
-    const stage = new delivery.Stage(`${name}-canary`, { pipeline }, child);
+    const deployStage = new delivery.Stage(`${name}-deploy`, { pipeline }, child);
+    const shiftStage = new delivery.Stage(
+      `${name}-shift`,
+      {
+        pipeline,
+        from: [deployStage],
+        when: args.requireApprovalBeforeShift
+          ? delivery.approvalOutput({ count: 1 }, child)
+          : undefined,
+      },
+      child,
+    );
+    const promoteStage = new delivery.Stage(
+      `${name}-promote`,
+      { pipeline, from: [shiftStage] },
+      child,
+    );
     const stackDirectory = args.target.directory ?? '.';
     const percent = validateInteger('canaryPercent', args.canaryPercent ?? 10, 1, 99);
     const job = createCanaryJobs(name, args, source, this, percent);
 
-    const baseline = job('snapshot', stage).outputs.apply((outputs) => ({
+    const baseline = job('snapshot', deployStage).outputs.apply((outputs) => ({
       stableRevisionId: requireString(outputs?.stableRevisionId, 'snapshot.stableRevisionId', true),
       functionArn: requireString(outputs?.functionArn, 'snapshot.functionArn', true),
       productionEndpointArn: requireString(
@@ -112,8 +133,9 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
       ),
       releaseTag: requireString(outputs?.releaseTag, 'snapshot.releaseTag'),
     }));
-    const deploy = (
+    const updateStack = (
       suffix: string,
+      stage: delivery.Stage,
       release: pulumi.Input<string>,
       dependsOn?: pulumi.Resource,
     ): delivery.Stacks =>
@@ -135,8 +157,9 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
         },
         { ...child, dependsOn },
       );
-    const published = deploy(
+    const published = updateStack(
       'publish',
+      deployStage,
       baseline.apply(({ stableRevisionId }) =>
         JSON.stringify({
           stableRevisionId,
@@ -175,12 +198,12 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
       CANARY_PRODUCTION_ENDPOINT_ARN: candidate.endpointArn,
       CANARY_STABLE_REVISION_ID: baseline.stableRevisionId,
     };
-    const verification = job('verify', stage, {
+    job('verify', deployStage, {
       ...candidateEnvironment,
       CANARY_PRODUCTION_URL: productionUrl(published),
     });
     const release = (
-      phase: 'shift' | 'finalize',
+      phase: 'shift' | 'reconcile' | 'finalize',
       weight: pulumi.Input<number>,
     ): pulumi.Output<string> =>
       pulumi
@@ -193,9 +216,10 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
             candidatePercent,
           }),
         );
-    // Shift uses the published revision but must wait for verification to succeed.
-    const shifted = deploy('shift', release('shift', percent), verification);
-    const observation = job('observe', stage, {
+    // The stage waits for verification. Check again after any approval wait before writing.
+    const preShift = job('pre-shift', shiftStage, candidateEnvironment);
+    const shifted = updateStack('shift', shiftStage, release('shift', percent), preShift);
+    const observation = job('observe', shiftStage, {
       ...candidateEnvironment,
       CANARY_PRODUCTION_URL: productionUrl(shifted),
     });
@@ -210,33 +234,41 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
         reason: requireString(outputs.reason, 'observe.reason', outputs.verdict === 'promote'),
       };
     });
-    const finalized = deploy(
-      'finalize',
+    const checkedEndpointArn = (update: delivery.Stacks): pulumi.Output<string> =>
+      pulumi.all([candidate, update.outputs]).apply(([publishedCandidate, outputs]) => {
+        const arn = requireString(outputs?.target?.productionEndpointArn, 'productionEndpointArn');
+        if (arn !== publishedCandidate.endpointArn) {
+          throw new Error(
+            'The production endpoint changed during the rollout. Check live routing before retrying.',
+          );
+        }
+        return arn;
+      });
+
+    // Keep this update inside Shift. On success the endpoint weights are unchanged.
+    const reconciled = updateStack(
+      'reconcile',
+      shiftStage,
       release(
-        'finalize',
-        verdict.action.apply((action) => (action === 'promote' ? 100 : 0)),
+        'reconcile',
+        pulumi
+          .all([verdict.action, percent])
+          .apply(([action, weight]) => (action === 'restore' ? 0 : weight)),
       ),
     );
-    job('result', stage, {
+    job('shift-result', shiftStage, {
       ...candidateEnvironment,
-      CANARY_PRODUCTION_ENDPOINT_ARN: pulumi
-        .all([candidate, finalized.outputs])
-        .apply(([publishedCandidate, outputs]) => {
-          const arn = requireString(
-            outputs?.target?.productionEndpointArn,
-            'productionEndpointArn',
-          );
-          if (arn !== publishedCandidate.endpointArn) {
-            throw new Error(
-              'The production endpoint changed during the rollout. Check live routing before retrying.',
-            );
-          }
-          return arn;
-        }),
+      CANARY_PRODUCTION_ENDPOINT_ARN: checkedEndpointArn(reconciled),
       CANARY_VERDICT: verdict.action,
       CANARY_FAILURE_REASON: verdict.reason,
     });
-    this.completionStageUrn = stage.urn;
+
+    const finalized = updateStack('finalize', promoteStage, release('finalize', 100));
+    job('result', promoteStage, {
+      ...candidateEnvironment,
+      CANARY_PRODUCTION_ENDPOINT_ARN: checkedEndpointArn(finalized),
+    });
+    this.completionStageUrn = promoteStage.urn;
     this.registerOutputs({ completionStageUrn: this.completionStageUrn });
   }
 }
@@ -336,7 +368,7 @@ function productionUrl(deployment: delivery.Stacks): pulumi.Output<string> {
   );
 }
 
-type CanaryOperation = 'snapshot' | 'verify' | 'observe' | 'result';
+type CanaryOperation = 'snapshot' | 'verify' | 'pre-shift' | 'observe' | 'shift-result' | 'result';
 
 /**
  * Reject absent or incorrectly typed stage outputs.

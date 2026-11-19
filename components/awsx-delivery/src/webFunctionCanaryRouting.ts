@@ -63,7 +63,7 @@ export class WebFunctionCanaryRouting extends pulumi.ComponentResource {
 }
 
 interface Release {
-  phase: 'publish' | 'shift' | 'finalize';
+  phase: 'publish' | 'shift' | 'reconcile' | 'finalize';
   stableRevisionId: string;
   candidateRevisionId?: string;
   candidatePercent: number;
@@ -85,6 +85,10 @@ function readRelease(): Release {
     !(
       (phase === 'publish' && candidatePercent === (stableRevisionId ? 0 : 100)) ||
       (phase === 'shift' && candidatePercent > 0 && candidatePercent < 100) ||
+      (phase === 'reconcile' &&
+        candidatePercent >= 0 &&
+        candidatePercent < 100 &&
+        (candidatePercent > 0 || stableRevisionId)) ||
       (phase === 'finalize' &&
         (candidatePercent === 100 || (candidatePercent === 0 && stableRevisionId)))
     ) ||

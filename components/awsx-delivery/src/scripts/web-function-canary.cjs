@@ -142,21 +142,31 @@ function verify() {
 }
 
 /**
+ * Read the target stack without revealing secret outputs.
+ *
+ * @returns {object} The latest target stack outputs.
+ */
+function readStackOutputs() {
+  const outputs = JSON.parse(
+    execFileSync('pulumi', ['stack', 'output', '--json', '--stack', required('CANARY_STACK')], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'inherit'],
+    }),
+  );
+  if (!outputs || typeof outputs !== 'object' || Array.isArray(outputs)) {
+    throw new Error('Expected a JSON object from the target stack outputs.');
+  }
+  return outputs;
+}
+
+/**
  * Perform one rollout operation within its Delivery job.
  *
  * @param {string} mode Runner operation.
  */
 async function main(mode) {
   if (mode === 'snapshot') {
-    const stackOutputs = JSON.parse(
-      execFileSync('pulumi', ['stack', 'output', '--json', '--stack', required('CANARY_STACK')], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'inherit'],
-      }),
-    );
-    if (!stackOutputs || typeof stackOutputs !== 'object' || Array.isArray(stackOutputs)) {
-      throw new Error('Expected a JSON object from the target stack outputs.');
-    }
+    const stackOutputs = readStackOutputs();
     const functionArn = Object.keys(stackOutputs).length === 0 ? '' : stackOutputs.functionArn;
     if (typeof functionArn !== 'string' || (!functionArn && Object.keys(stackOutputs).length > 0)) {
       throw new Error(
@@ -204,11 +214,25 @@ async function main(mode) {
     await requireRouting(expected);
     return;
   }
+  if (mode === 'pre-shift') {
+    const outputs = readStackOutputs();
+    if (
+      outputs.candidateRevisionId !== candidate ||
+      outputs.functionArn !== required('CANARY_FUNCTION_ARN') ||
+      outputs.productionEndpointArn !== required('CANARY_PRODUCTION_ENDPOINT_ARN')
+    ) {
+      throw new Error(
+        'The target stack no longer points to this release. Refusing to shift traffic.',
+      );
+    }
+    await requireRouting({ [stable || candidate]: 100 });
+    return;
+  }
+  const expectedSplit = split
+    ? { [stable]: 100 - percent, [candidate]: percent }
+    : { [candidate]: 100 };
   if (mode === 'observe') {
-    const expected = split
-      ? { [stable]: 100 - percent, [candidate]: percent }
-      : { [stable || candidate]: 100 };
-    await requireRouting(expected);
+    await requireRouting(expectedSplit);
     let failure = '';
     if (split) {
       const start = performance.now();
@@ -218,21 +242,28 @@ async function main(mode) {
           Math.max(0, Number(required('CANARY_BAKE_SECONDS')) * 1000 - (performance.now() - start)),
         );
     }
-    await requireRouting(expected);
+    await requireRouting(expectedSplit);
     if (failure) console.error(`${failure}. Restoring ${stable} before failing this release.`);
     output({ verdict: failure ? 'restore' : 'promote', reason: failure });
     return;
   }
-  if (mode === 'result') {
+  if (mode === 'shift-result') {
     const verdict = required('CANARY_VERDICT');
-    if (verdict !== 'promote' && verdict !== 'restore') throw new Error('Invalid canary verdict.');
-    const revision = verdict === 'restore' ? required('CANARY_STABLE_REVISION_ID') : candidate;
-    await requireRouting({ [revision]: 100 });
-    if (verdict === 'restore')
+    if (verdict === 'restore') {
+      const revision = required('CANARY_STABLE_REVISION_ID');
+      await requireRouting({ [revision]: 100 });
       throw new Error(
         `${required('CANARY_FAILURE_REASON')}. Restored stable revision ${revision}.`,
       );
-    console.log(`Verified production at 100% on ${revision}.`);
+    }
+    if (verdict !== 'promote') throw new Error('Invalid canary verdict.');
+    await requireRouting(expectedSplit);
+    console.log('Canary passed and production routing is ready for promotion.');
+    return;
+  }
+  if (mode === 'result') {
+    await requireRouting({ [candidate]: 100 });
+    console.log(`Verified production at 100% on ${candidate}.`);
     return;
   }
   throw new Error(`Unknown canary operation: ${mode}`);

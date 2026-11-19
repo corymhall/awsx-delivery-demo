@@ -16,7 +16,7 @@ const mocks: pulumi.runtime.Mocks = {
         productionEndpointArn: args.name.startsWith('bootstrap') ? '' : 'production-endpoint-arn',
       };
     } else if (
-      ['-publish-stack', '-shift-stack', '-finalize-stack'].some((suffix) =>
+      ['-publish-stack', '-shift-stack', '-reconcile-stack', '-finalize-stack'].some((suffix) =>
         args.name.endsWith(suffix),
       )
     ) {
@@ -37,7 +37,9 @@ const mocks: pulumi.runtime.Mocks = {
     return { id: args.name, state };
   },
   call(args) {
-    return args.inputs;
+    return args.token === 'delivery:index:approval'
+      ? { kind: 'approval', ...args.inputs }
+      : args.inputs;
   },
 };
 
@@ -48,11 +50,11 @@ beforeEach(() => {
 
 test.each([
   ['rejected', 0, 'restore'],
-  ['accepted', 100, 'promote'],
-  ['bootstrap', 100, 'promote'],
+  ['accepted', 15, 'promote'],
+  ['bootstrap', 15, 'promote'],
 ])(
   'rollout %s wires the verdict to the pinned traffic update before reporting the result',
-  async (name, finalPercent, verdict) => {
+  async (name, reconciledPercent, verdict) => {
     const registrations = jest.spyOn(MockMonitor.prototype, 'registerResource');
     const pipeline = new delivery.Pipeline(`${name}-pipeline`);
     const source = new delivery.GitHubSource(`${name}-source`, {
@@ -66,6 +68,7 @@ test.each([
       awsEnvironment: 'acme/app/dev',
       verification: { command: 'npm test' },
       canaryPercent: 15,
+      requireApprovalBeforeShift: name === 'accepted',
     });
     const resultStage = await new Promise<string>((resolve) => {
       canary.completionStageUrn.apply(resolve);
@@ -77,12 +80,19 @@ test.each([
     expect(JSON.parse(published['webFunctionCanary:release']).candidatePercent).toBe(
       bootstrap ? 100 : 0,
     );
+    const reconcile = resources.get(`${name}-reconcile-stack`)!.inputs.stacks.target.config;
+    expect(JSON.parse(reconcile['webFunctionCanary:release'])).toEqual({
+      phase: 'reconcile',
+      stableRevisionId: bootstrap ? '' : 'old',
+      candidateRevisionId: 'new',
+      candidatePercent: reconciledPercent,
+    });
     const finalize = resources.get(`${name}-finalize-stack`)!.inputs.stacks.target.config;
     expect(JSON.parse(finalize['webFunctionCanary:release'])).toEqual({
       phase: 'finalize',
       stableRevisionId: bootstrap ? '' : 'old',
       candidateRevisionId: 'new',
-      candidatePercent: finalPercent,
+      candidatePercent: 100,
     });
     const shift = resources.get(`${name}-shift-stack`)!.inputs.stacks.target.config;
     expect(JSON.parse(shift['webFunctionCanary:release'])).toMatchObject({
@@ -94,37 +104,41 @@ test.each([
       CANARY_BAKE_SECONDS: '300',
       CANARY_PRODUCTION_ENDPOINT_ARN: 'production-endpoint-arn',
     });
-    expect(resources.get(`${name}-result-job`)!.inputs.environment.CANARY_VERDICT).toBe(verdict);
-    const members = [...resources.values()].filter(({ type }) =>
-      ['delivery:index:Stacks', 'delivery:index:Job'].includes(type),
+    expect(resources.get(`${name}-shift-result-job`)!.inputs.environment.CANARY_VERDICT).toBe(
+      verdict,
     );
-    expect(resultStage).toMatch(new RegExp(`${name}-canary$`));
-    expect(
-      [...resources.values()].filter(({ type }) => type === 'delivery:index:Stage'),
-    ).toHaveLength(1);
-    expect(members).toHaveLength(7);
-    const stageUrns = await Promise.all(
-      members.map(
-        (member) => new Promise<string>((resolve) => member.inputs.stage.urn.apply(resolve)),
+    const registered = (suffix: string): Parameters<MockMonitor['registerResource']>[0] =>
+      registrations.mock.calls.find(([request]) => request.getName() === `${name}-${suffix}`)![0];
+    const stageUrn = (suffix: string): ReturnType<typeof expect.stringMatching> =>
+      expect.stringMatching(new RegExp(`::${name}-${suffix}$`));
+    expect(resultStage).toEqual(stageUrn('promote'));
+    const upstream = (suffix: string): Promise<string> =>
+      new Promise((resolve) =>
+        resources.get(`${name}-${suffix}`)!.inputs.from[0].urn.apply(resolve),
+      );
+    await expect(upstream('shift')).resolves.toEqual(stageUrn('deploy'));
+    await expect(upstream('promote')).resolves.toEqual(stageUrn('shift'));
+    const gate = resources.get(`${name}-shift`)!.inputs.when;
+    if (name === 'accepted') expect(gate).toMatchObject({ kind: 'approval', count: 1 });
+    else expect(gate).toBeUndefined();
+    expect(resources.get(`${name}-promote`)!.inputs.when).toBeUndefined();
+    const groups = {
+      deploy: ['snapshot-job', 'publish-stack', 'verify-job'],
+      shift: ['pre-shift-job', 'shift-stack', 'observe-job', 'reconcile-stack', 'shift-result-job'],
+      promote: ['finalize-stack', 'result-job'],
+    };
+    await Promise.all(
+      Object.entries(groups).flatMap(([stage, steps]) =>
+        steps.map(async (step, i) => {
+          const member = resources.get(`${name}-${step}`)!;
+          const memberStage = await new Promise<string>((resolve) =>
+            member.inputs.stage.urn.apply(resolve),
+          );
+          expect(memberStage).toEqual(stageUrn(stage));
+          if (i > 0)
+            expect(registered(step).getDependenciesList()).toContainEqual(stageUrn(steps[i - 1]!));
+        }),
       ),
     );
-    expect(stageUrns).toEqual(members.map(() => resultStage));
-    const order = [
-      'snapshot-job',
-      'publish-stack',
-      'verify-job',
-      'shift-stack',
-      'observe-job',
-      'finalize-stack',
-      'result-job',
-    ];
-    for (let i = 1; i < order.length; i++) {
-      const request = registrations.mock.calls.find(
-        ([registration]) => registration.getName() === `${name}-${order[i]}`,
-      )?.[0];
-      expect(request?.getDependenciesList()).toContainEqual(
-        expect.stringMatching(new RegExp(`::${name}-${order[i - 1]}$`)),
-      );
-    }
   },
 );

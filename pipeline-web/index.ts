@@ -18,6 +18,7 @@ new WebFunctionCanary('dashboard', {
     directory: 'infra-web',
   },
   awsEnvironment: `${pulumi.getOrganization()}/${web.awsEnvironment}`,
+  requireApprovalBeforeShift: true,
   verification: {
     directory: 'pipeline-web',
     command: 'node --experimental-strip-types scripts/probe.ts',
