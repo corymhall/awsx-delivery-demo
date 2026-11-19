@@ -157,9 +157,8 @@ test('a healthy split produces a promote verdict and verifies full candidate rou
   expect(run('observe', { previous: 85, next: 15 }).status).toBe(0);
   expect(JSON.parse(readFileSync(outputs, 'utf8')).verdict).toBe('promote');
   const verdict = { CANARY_VERDICT: 'promote' };
-  expect(run('shift-result', { previous: 85, next: 15 }, verdict).status).toBe(0);
-  expect(run('shift-result', { previous: 100 }, verdict).status).toBe(1);
-  expect(run('result', { next: 100 }).status).toBe(0);
+  expect(run('result', { previous: 85, next: 15 }, verdict).status).toBe(1);
+  expect(run('result', { next: 100 }, verdict).status).toBe(0);
 });
 
 test.each(['exit 7', 'sleep 10'])(
@@ -170,7 +169,7 @@ test.each(['exit 7', 'sleep 10'])(
     const verdict = JSON.parse(readFileSync(outputs, 'utf8'));
     expect(verdict.verdict).toBe('restore');
     const result = run(
-      'shift-result',
+      'result',
       { previous: 100 },
       { CANARY_VERDICT: verdict.verdict, CANARY_FAILURE_REASON: verdict.reason },
     );
@@ -201,7 +200,7 @@ test('unexpected production routing never requests a write or claims restoration
   expect(run('observe', { previous: 85, different: 15 }).status).toBe(1);
   expect(existsSync(outputs)).toBe(false);
   const result = run(
-    'shift-result',
+    'result',
     { next: 100 },
     { CANARY_VERDICT: 'restore', CANARY_FAILURE_REASON: 'check failed' },
   );

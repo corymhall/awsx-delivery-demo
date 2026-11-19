@@ -16,7 +16,7 @@ const mocks: pulumi.runtime.Mocks = {
         productionEndpointArn: args.name.startsWith('bootstrap') ? '' : 'production-endpoint-arn',
       };
     } else if (
-      ['-publish-stack', '-shift-stack', '-reconcile-stack', '-finalize-stack'].some((suffix) =>
+      ['-publish-stack', '-shift-stack', '-finalize-stack'].some((suffix) =>
         args.name.endsWith(suffix),
       )
     ) {
@@ -50,11 +50,11 @@ beforeEach(() => {
 
 test.each([
   ['rejected', 0, 'restore'],
-  ['accepted', 15, 'promote'],
-  ['bootstrap', 15, 'promote'],
+  ['accepted', 100, 'promote'],
+  ['bootstrap', 100, 'promote'],
 ])(
   'rollout %s wires the verdict to the pinned traffic update before reporting the result',
-  async (name, reconciledPercent, verdict) => {
+  async (name, finalPercent, verdict) => {
     const registrations = jest.spyOn(MockMonitor.prototype, 'registerResource');
     const pipeline = new delivery.Pipeline(`${name}-pipeline`);
     const source = new delivery.GitHubSource(`${name}-source`, {
@@ -80,19 +80,12 @@ test.each([
     expect(JSON.parse(published['webFunctionCanary:release']).candidatePercent).toBe(
       bootstrap ? 100 : 0,
     );
-    const reconcile = resources.get(`${name}-reconcile-stack`)!.inputs.stacks.target.config;
-    expect(JSON.parse(reconcile['webFunctionCanary:release'])).toEqual({
-      phase: 'reconcile',
-      stableRevisionId: bootstrap ? '' : 'old',
-      candidateRevisionId: 'new',
-      candidatePercent: reconciledPercent,
-    });
     const finalize = resources.get(`${name}-finalize-stack`)!.inputs.stacks.target.config;
     expect(JSON.parse(finalize['webFunctionCanary:release'])).toEqual({
       phase: 'finalize',
       stableRevisionId: bootstrap ? '' : 'old',
       candidateRevisionId: 'new',
-      candidatePercent: 100,
+      candidatePercent: finalPercent,
     });
     const shift = resources.get(`${name}-shift-stack`)!.inputs.stacks.target.config;
     expect(JSON.parse(shift['webFunctionCanary:release'])).toMatchObject({
@@ -104,29 +97,33 @@ test.each([
       CANARY_BAKE_SECONDS: '300',
       CANARY_PRODUCTION_ENDPOINT_ARN: 'production-endpoint-arn',
     });
-    expect(resources.get(`${name}-shift-result-job`)!.inputs.environment.CANARY_VERDICT).toBe(
-      verdict,
-    );
+    expect(resources.get(`${name}-result-job`)!.inputs.environment.CANARY_VERDICT).toBe(verdict);
     const registered = (suffix: string): Parameters<MockMonitor['registerResource']>[0] =>
       registrations.mock.calls.find(([request]) => request.getName() === `${name}-${suffix}`)![0];
     const stageUrn = (suffix: string): ReturnType<typeof expect.stringMatching> =>
       expect.stringMatching(new RegExp(`::${name}-${suffix}$`));
-    expect(resultStage).toEqual(stageUrn('promote'));
+    expect(resultStage).toEqual(stageUrn('finalize'));
     const upstream = (suffix: string): Promise<string> =>
       new Promise((resolve) =>
         resources.get(`${name}-${suffix}`)!.inputs.from[0].urn.apply(resolve),
       );
     await expect(upstream('shift')).resolves.toEqual(stageUrn('deploy'));
-    await expect(upstream('promote')).resolves.toEqual(stageUrn('shift'));
+    await expect(upstream('finalize')).resolves.toEqual(stageUrn('shift'));
     const gate = resources.get(`${name}-shift`)!.inputs.when;
     if (name === 'accepted') expect(gate).toMatchObject({ kind: 'approval', count: 1 });
     else expect(gate).toBeUndefined();
-    expect(resources.get(`${name}-promote`)!.inputs.when).toBeUndefined();
+    expect(resources.get(`${name}-finalize`)!.inputs.when).toBeUndefined();
+    expect(registered('finalize-stack').getDependenciesList()).toContainEqual(
+      stageUrn('observe-job'),
+    );
     const groups = {
       deploy: ['snapshot-job', 'publish-stack', 'verify-job'],
-      shift: ['pre-shift-job', 'shift-stack', 'observe-job', 'reconcile-stack', 'shift-result-job'],
-      promote: ['finalize-stack', 'result-job'],
+      shift: ['pre-shift-job', 'shift-stack', 'observe-job'],
+      finalize: ['finalize-stack', 'result-job'],
     };
+    expect(
+      [...resources.values()].filter(({ type }) => type === 'delivery:index:Stacks'),
+    ).toHaveLength(3);
     await Promise.all(
       Object.entries(groups).flatMap(([stage, steps]) =>
         steps.map(async (step, i) => {

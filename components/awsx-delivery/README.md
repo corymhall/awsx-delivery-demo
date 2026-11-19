@@ -62,8 +62,8 @@ Full example: [application stack](../../infra/index.ts) and [pipeline](../../pip
 Add a canary to an existing Delivery pipeline. The component creates three stages:
 
 - **Deploy** snapshots production, publishes the candidate, and verifies it on the test endpoint.
-- **Shift** rechecks the baseline, shifts traffic, and runs the canary probe. On probe failure or timeout it restores stable, confirms the live weights, and fails this stage before Promote can run.
-- **Promote** moves all traffic to the candidate and confirms live routing. The component's `completionStageUrn` identifies this stage.
+- **Shift** rechecks the baseline, shifts traffic, and runs the canary probe. It reports a verdict even when the probe fails or times out, so Finalize can restore stable.
+- **Finalize** is ungated. One stack update moves all traffic to the candidate or restores stable, depending on the verdict. The result job confirms live routing and reports failure after a confirmed restore. The component's `completionStageUrn` identifies this stage.
 
 ```ts
 import { WebFunctionCanary } from '@pulumi/awsx-delivery';

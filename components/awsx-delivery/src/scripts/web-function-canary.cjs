@@ -247,23 +247,16 @@ async function main(mode) {
     output({ verdict: failure ? 'restore' : 'promote', reason: failure });
     return;
   }
-  if (mode === 'shift-result') {
+  if (mode === 'result') {
     const verdict = required('CANARY_VERDICT');
-    if (verdict === 'restore') {
-      const revision = required('CANARY_STABLE_REVISION_ID');
-      await requireRouting({ [revision]: 100 });
+    if (verdict !== 'promote' && verdict !== 'restore') throw new Error('Invalid canary verdict.');
+    const revision = verdict === 'restore' ? required('CANARY_STABLE_REVISION_ID') : candidate;
+    await requireRouting({ [revision]: 100 });
+    if (verdict === 'restore')
       throw new Error(
         `${required('CANARY_FAILURE_REASON')}. Restored stable revision ${revision}.`,
       );
-    }
-    if (verdict !== 'promote') throw new Error('Invalid canary verdict.');
-    await requireRouting(expectedSplit);
-    console.log('Canary passed and production routing is ready for promotion.');
-    return;
-  }
-  if (mode === 'result') {
-    await requireRouting({ [candidate]: 100 });
-    console.log(`Verified production at 100% on ${candidate}.`);
+    console.log(`Verified production at 100% on ${revision}.`);
     return;
   }
   throw new Error(`Unknown canary operation: ${mode}`);

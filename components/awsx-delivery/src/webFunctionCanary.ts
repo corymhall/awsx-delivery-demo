@@ -114,8 +114,8 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
       },
       child,
     );
-    const promoteStage = new delivery.Stage(
-      `${name}-promote`,
+    const finalizeStage = new delivery.Stage(
+      `${name}-finalize`,
       { pipeline, from: [shiftStage] },
       child,
     );
@@ -203,7 +203,7 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
       CANARY_PRODUCTION_URL: productionUrl(published),
     });
     const release = (
-      phase: 'shift' | 'reconcile' | 'finalize',
+      phase: 'shift' | 'finalize',
       weight: pulumi.Input<number>,
     ): pulumi.Output<string> =>
       pulumi
@@ -245,30 +245,22 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
         return arn;
       });
 
-    // Keep this update inside Shift. On success the endpoint weights are unchanged.
-    const reconciled = updateStack(
-      'reconcile',
-      shiftStage,
+    // Keep Finalize ungated so either verdict can reach the routing update.
+    const finalized = updateStack(
+      'finalize',
+      finalizeStage,
       release(
-        'reconcile',
-        pulumi
-          .all([verdict.action, percent])
-          .apply(([action, weight]) => (action === 'restore' ? 0 : weight)),
+        'finalize',
+        verdict.action.apply((action) => (action === 'restore' ? 0 : 100)),
       ),
     );
-    job('shift-result', shiftStage, {
+    job('result', finalizeStage, {
       ...candidateEnvironment,
-      CANARY_PRODUCTION_ENDPOINT_ARN: checkedEndpointArn(reconciled),
+      CANARY_PRODUCTION_ENDPOINT_ARN: checkedEndpointArn(finalized),
       CANARY_VERDICT: verdict.action,
       CANARY_FAILURE_REASON: verdict.reason,
     });
-
-    const finalized = updateStack('finalize', promoteStage, release('finalize', 100));
-    job('result', promoteStage, {
-      ...candidateEnvironment,
-      CANARY_PRODUCTION_ENDPOINT_ARN: checkedEndpointArn(finalized),
-    });
-    this.completionStageUrn = promoteStage.urn;
+    this.completionStageUrn = finalizeStage.urn;
     this.registerOutputs({ completionStageUrn: this.completionStageUrn });
   }
 }
@@ -368,7 +360,7 @@ function productionUrl(deployment: delivery.Stacks): pulumi.Output<string> {
   );
 }
 
-type CanaryOperation = 'snapshot' | 'verify' | 'pre-shift' | 'observe' | 'shift-result' | 'result';
+type CanaryOperation = 'snapshot' | 'verify' | 'pre-shift' | 'observe' | 'result';
 
 /**
  * Reject absent or incorrectly typed stage outputs.
