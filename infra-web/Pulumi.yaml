@@ -5,4 +5,5 @@ runtime:
     packagemanager: npm
     tsconfig: tsconfig.pulumi.json
 packages:
+  awsx-delivery: ../components/awsx-delivery
   awsx-next: github.com/pulumi/pulumi-awsx.git/awsx-next@575e63a9b93755adb2957fd40c91cc947b0cb0ac

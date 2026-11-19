@@ -5,3 +5,5 @@ export {
   EcsCheckpointCompletion,
 } from './src/ecsDeliveryApprovalHook';
 export { EcsDeploymentCheckpoint } from './src/ecsDeploymentCheckpoint';
+export { WebFunctionCanary } from './src/webFunctionCanary';
+export { WebFunctionCanaryRouting } from './src/webFunctionCanaryRouting';

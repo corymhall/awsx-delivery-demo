@@ -10,14 +10,17 @@
     "check": "npm run format:check && npm run lint && npm run typecheck"
   },
   "dependencies": {
-    "@pulumi/pulumi": "^3.275.0",
+    "@pulumi/awsx-delivery": "file:sdks/pulumi-awsx-delivery",
     "@pulumi/delivery": "0.2.0",
-    "@aws-sdk/client-lambda-web": "3.1171.0"
+    "@pulumi/pulumi": "^3.275.0"
   },
   "devDependencies": {
     "@types/node": "^24",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
     "typescript": "npm:@typescript/typescript6@6.0.2"
+  },
+  "allowScripts": {
+    "file:sdks/pulumi-awsx-delivery": true
   }
 }

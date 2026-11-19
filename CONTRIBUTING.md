@@ -11,6 +11,8 @@ mise install
 pulumi install --cwd components/awsx-delivery
 pulumi install --cwd infra
 pulumi install --cwd pipeline
+pulumi install --cwd infra-web
+pulumi install --cwd pipeline-web
 npm ci --prefix identity
 mise run hooks:install
 mise run validate
@@ -47,11 +49,12 @@ pushing changes. Schema checks load the component plugin but do not deploy resou
 
 ## Regenerate a consumer SDK
 
-After changing a component's public inputs or outputs, regenerate both consumer SDKs:
+After changing a component's public inputs or outputs, regenerate the consumer SDKs:
 
 ```sh
 pulumi package add ../components/awsx-delivery --cwd infra
 pulumi package add ../components/awsx-delivery --cwd pipeline
+pulumi package add ../components/awsx-delivery --cwd pipeline-web
 mise run validate
 ```
 

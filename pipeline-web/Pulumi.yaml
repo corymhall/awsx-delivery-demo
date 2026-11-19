@@ -4,3 +4,5 @@ runtime:
   options:
     packagemanager: npm
     tsconfig: tsconfig.pulumi.json
+packages:
+  awsx-delivery: ../components/awsx-delivery

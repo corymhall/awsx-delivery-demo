@@ -1,63 +1,112 @@
 # AWSX Delivery components
 
-Experimental source-based Pulumi components for ECS deployment checkpoints.
-These APIs can change and are not part of the AWSX library.
+Experimental Pulumi components for ECS deployment checkpoints and Lambda Web Function canaries.
 
-## Add the package
+## Install
 
-From this repository's `infra` or `pipeline` directory, run:
+From a demo project such as `infra-web` or `pipeline`:
 
 ```sh
 pulumi package add ../components/awsx-delivery
 ```
 
-Once the repository is public, use a Git commit containing the package:
+From another repository with access to this repo, pin a commit:
 
 ```sh
 pulumi package add github.com/corymhall/awsx-delivery-demo.git/components/awsx-delivery@<commit>
 ```
 
-Pulumi generates a consumer SDK and resolves the Delivery dependency declared in
-`PulumiPlugin.yaml`. A program that imports Delivery directly also needs its own
-Delivery package dependency. The demo pipeline declares both packages.
+Use `@pulumi/pulumi` 3.275.0 or newer. Pipeline projects that import `@pulumi/delivery` also need that SDK.
 
-The component runtime and consuming programs require `@pulumi/pulumi` 3.275.0 or
-newer. Deployment requires access to the Delivery service and the matching provider.
+## ECS deployment checkpoint
 
-## Add an ECS checkpoint
+Create the hook in the application stack:
 
-In the application program, create a hook for the pipeline's checkpoint stage:
+```ts
+import { EcsCheckpointCompletion, EcsDeliveryApprovalHook } from '@pulumi/awsx-delivery';
 
-```typescript
-import * as awsxDelivery from '@pulumi/awsx-delivery';
-
-const hook = new awsxDelivery.EcsDeliveryApprovalHook('hook', {
+const hook = new EcsDeliveryApprovalHook('hook', {
   pipelineStack: 'my-org/pipeline/dev',
   authentication: { teamOidc: { teamName: 'delivery' } },
-  checkpoint: {
-    stageName: 'test',
-    completion: awsxDelivery.EcsCheckpointCompletion.AUTOMATED_TEST,
+  checkpoint: { stageName: 'test', completion: EcsCheckpointCompletion.AUTOMATED_TEST },
+});
+```
+
+Attach `hook.functionArn` and `hook.hookDetails` at `POST_TEST_TRAFFIC_SHIFT` and set `waitForSteadyState: false`. Add the matching checkpoint after the application update:
+
+```ts
+import { EcsDeploymentCheckpoint } from '@pulumi/awsx-delivery';
+
+new EcsDeploymentCheckpoint('test', {
+  pipelineUrn: pipeline.urn,
+  upstreamStageUrn: dev.urn,
+  sourceUrn: source.urn,
+  serviceArn: appOutputs.ecsServiceArn,
+  taskDefinitionArn: appOutputs.ecsTaskDefinition,
+  environment: 'my-org/my-app/dev',
+  automatedTest: {
+    command: 'node --test infra/test/integration.test.ts',
+    environment: {
+      TEST_URL: appOutputs.testUrl,
+      TEST_HEADER_NAME: 'X-Deployment-Test',
+      TEST_HEADER_VALUE: 'green',
+    },
   },
 });
 ```
 
-Authorize the hook's execution identity before use. Attach `hook.functionArn` and
-`hook.hookDetails` to the ECS service at `POST_TEST_TRAFFIC_SHIFT`. Set
-`waitForSteadyState: false` so the application update can finish while ECS waits.
+Full example: [application stack](../../infra/index.ts) and [pipeline](../../pipeline/index.ts).
 
-In the pipeline, create an `EcsDeploymentCheckpoint` named `test` with an
-`automatedTest` command. Pass the pipeline, upstream stage, and source URNs, the
-updated service and task definition ARNs, and an ESC environment for AWS credentials.
-See the complete [application](../../infra/index.ts) and
-[pipeline](../../pipeline/index.ts) programs for the paired configuration.
+## Lambda Web Function canary
 
-## Component reference
+Add a canary to an existing Delivery pipeline:
 
-- [`EcsDeliveryApprovalHook`](src/ecsDeliveryApprovalHook.ts) creates the authenticated Lambda and renders the ECS hook payload. It does not configure the ECS service or federation trust.
-- [`EcsDeploymentCheckpoint`](src/ecsDeploymentCheckpoint.ts) discovers the deployment, creates the approval or automated-test checkpoint, and verifies deployment completion. It does not own the pipeline or ECS service.
-- [`PulumiApiHook`](src/pulumiApiHook.ts) creates the lower-level Lambda, log group, and execution policy. Its [Lambda reference](functions/pulumi-api-hook/README.md) describes the event contract and retries.
+```ts
+import { WebFunctionCanary } from '@pulumi/awsx-delivery';
 
-Source comments define inputs, outputs, and defaults. The resource-token namespace
-is `awsx-delivery`.
+new WebFunctionCanary('dashboard', {
+  pipelineUrn: pipeline.urn,
+  sourceUrn: source.urn,
+  target: { stackName: 'my-org/web-app/dev', directory: 'infra-web' },
+  awsEnvironment: 'my-org/my-app/dev',
+  canaryPercent: 10,
+  canaryBakeTimeMinutes: 5,
+  verification: { directory: 'pipeline-web', command: 'node scripts/probe.ts' },
+});
+```
 
-See [Contributing](../../CONTRIBUTING.md) to build, test, or regenerate the package.
+In the application stack, wire the function's revision into both endpoints:
+
+```ts
+import { WebFunctionCanaryRouting } from '@pulumi/awsx-delivery';
+import { WebFunctionAuthType, WebFunctionEndpoint } from '@pulumi/awsx-next';
+
+const routing = new WebFunctionCanaryRouting('routing', {
+  candidateRevisionId: app.revisionId,
+});
+// This public demo delegates authentication to the application.
+const endpoint = {
+  functionName: app.functionName,
+  authType: WebFunctionAuthType.APPLICATION_MANAGED,
+};
+const test = new WebFunctionEndpoint('test', {
+  ...endpoint,
+  revisions: [{ revisionId: routing.candidateRevisionId }],
+});
+const production = new WebFunctionEndpoint('production', {
+  ...endpoint,
+  revisions: routing.productionRevisions,
+});
+
+export const candidateRevisionId = routing.candidateRevisionId;
+export const functionArn = app.functionArn;
+export const productionEndpointArn = production.endpointArn;
+export const productionUrl = production.url;
+export const testUrl = test.url;
+```
+
+The verification command receives `CANARY_CANDIDATE_URL` and `CANARY_PRODUCTION_URL`. Exit nonzero to reject the candidate. Run one release at a time per target.
+
+Full example: [application stack](../../infra-web/index.ts), [pipeline](../../pipeline-web/index.ts), and [verification script](../../pipeline-web/scripts/probe.ts).
+
+See [Contributing](../../CONTRIBUTING.md) for development and validation.

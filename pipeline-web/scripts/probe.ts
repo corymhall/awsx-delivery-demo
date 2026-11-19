@@ -10,23 +10,23 @@ async function ping(url: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const { CANDIDATE_URL, PRODUCTION_URL, STABLE_REVISION, CANDIDATE_REVISION } = process.env;
-  if (!CANDIDATE_URL) throw new Error('Missing candidate URL.');
-  // The probe without PRODUCTION_URL is the pre-canary smoke test.
-  if (!PRODUCTION_URL) return ping(CANDIDATE_URL);
-  if (!STABLE_REVISION || STABLE_REVISION === CANDIDATE_REVISION) {
-    console.log('No distinct stable revision. Skipping the canary wait.');
-    return;
-  }
-  const deadline = performance.now() + 300_000;
-  while (performance.now() < deadline) {
-    // oxlint-disable-next-line no-await-in-loop -- Wait for each round of probes before scheduling the next.
-    await Promise.all([ping(CANDIDATE_URL), ping(PRODUCTION_URL)]);
+  const { CANARY_CANDIDATE_URL, CANARY_PRODUCTION_URL, CANARY_PHASE, CANARY_BAKE_SECONDS } =
+    process.env;
+  if (!CANARY_CANDIDATE_URL) throw new Error('Missing candidate URL.');
+  if (CANARY_PHASE === 'pre-traffic') return ping(CANARY_CANDIDATE_URL);
+  if (CANARY_PHASE !== 'canary' || !CANARY_PRODUCTION_URL)
+    throw new Error('Missing canary production URL.');
+  const deadline = performance.now() + Number(CANARY_BAKE_SECONDS) * 1000;
+  // Always probe once, including when the requested bake time is zero.
+  let remaining = 0;
+  while (remaining >= 0) {
+    // oxlint-disable-next-line no-await-in-loop -- Probe both endpoints before the next round.
+    await Promise.all([ping(CANARY_CANDIDATE_URL), ping(CANARY_PRODUCTION_URL)]);
+    remaining = deadline - performance.now();
+    if (remaining <= 0) break;
     // oxlint-disable-next-line no-await-in-loop -- Space out probes over the canary window.
-    await delay(Math.min(15_000, Math.max(0, deadline - performance.now())));
+    await delay(Math.min(15_000, remaining));
   }
-  await Promise.all([ping(CANDIDATE_URL), ping(PRODUCTION_URL)]);
-  console.log('Five-minute canary completed.');
 }
 
 main().catch((error: unknown) => {

@@ -18,6 +18,7 @@ Direct updates outside Delivery explicitly bypass the test checkpoint.
 - `identity/` defines the hook's identity and permissions.
 - `infra/` defines the application, load balancer, and ECS service.
 - `pipeline/` defines the Delivery pipeline and integration-test checkpoint.
+- `infra-web/` and `pipeline-web/` demonstrate a Lambda Web Function canary with caller-defined verification and rollback. The demo endpoints are public.
 - `shared/` holds deployment identifiers and checkpoint settings.
 - [`components/awsx-delivery/`](components/awsx-delivery/README.md) contains the reusable preview components.
 

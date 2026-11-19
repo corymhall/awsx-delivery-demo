@@ -10,6 +10,9 @@
     "check": "npm run format:check && npm run lint && npm run typecheck"
   },
   "dependencies": {
+    "@pulumi/aws": "^7.55.0",
+    "@pulumi/aws-native": "^1.86.0",
+    "@pulumi/awsx-delivery": "file:sdks/pulumi-awsx-delivery",
     "@pulumi/awsx-next": "file:sdks/pulumi-awsx-next",
     "@pulumi/pulumi": "^3.275.0"
   },
@@ -20,6 +23,7 @@
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "allowScripts": {
+    "file:sdks/pulumi-awsx-delivery": true,
     "file:sdks/pulumi-awsx-next": true
   }
 }

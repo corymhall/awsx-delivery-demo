@@ -18,19 +18,13 @@ dir = "infra"
 auto = true
 run = "npm ci"
 
-[deps.infra-web]
-dir = "infra-web"
+# Both web projects install the same source component. Run them serially so its
+# npm prepare scripts do not modify the same node_modules concurrently.
+[deps.web]
 auto = true
-sources = ["Pulumi.yaml", "tsconfig.json", "tsconfig.pulumi.json", "package.json", "package-lock.json"]
-outputs = ["node_modules", "sdks/pulumi-awsx-next"]
-run = "pulumi install --non-interactive"
-
-[deps.pipeline-web]
-dir = "pipeline-web"
-auto = true
-sources = ["package.json", "package-lock.json"]
-outputs = ["node_modules"]
-run = "npm ci"
+sources = ["infra-web/Pulumi.yaml", "infra-web/tsconfig.json", "infra-web/tsconfig.pulumi.json", "infra-web/package.json", "infra-web/package-lock.json", "pipeline-web/Pulumi.yaml", "pipeline-web/package.json", "pipeline-web/package-lock.json", "components/awsx-delivery/index.ts", "components/awsx-delivery/src/webFunctionCanary.ts", "components/awsx-delivery/src/webFunctionCanaryRouting.ts"]
+outputs = ["infra-web/node_modules", "infra-web/sdks/pulumi-awsx-next", "infra-web/sdks/pulumi-awsx-delivery", "pipeline-web/node_modules", "pipeline-web/sdks/pulumi-awsx-delivery"]
+run = "pulumi install --cwd infra-web --non-interactive && pulumi install --cwd pipeline-web --non-interactive"
 
 [tasks.format]
 description = "Format infrastructure files"
