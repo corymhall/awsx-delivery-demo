@@ -1,5 +1,6 @@
 import * as pulumi from '@pulumi/pulumi';
 import * as delivery from '@pulumi/delivery';
+import { MockMonitor } from '@pulumi/pulumi/runtime/mocks';
 import { WebFunctionCanary } from '../src/webFunctionCanary';
 
 const resources = new Map<string, pulumi.runtime.MockResourceArgs>();
@@ -52,6 +53,7 @@ test.each([
 ])(
   'rollout %s wires the verdict to the pinned traffic update before reporting the result',
   async (name, finalPercent, verdict) => {
+    const registrations = jest.spyOn(MockMonitor.prototype, 'registerResource');
     const pipeline = new delivery.Pipeline(`${name}-pipeline`);
     const source = new delivery.GitHubSource(`${name}-source`, {
       repository: 'acme/dashboard',
@@ -93,6 +95,36 @@ test.each([
       CANARY_PRODUCTION_ENDPOINT_ARN: 'production-endpoint-arn',
     });
     expect(resources.get(`${name}-result-job`)!.inputs.environment.CANARY_VERDICT).toBe(verdict);
-    expect(resultStage).toMatch(new RegExp(`${name}-result$`));
+    const members = [...resources.values()].filter(({ type }) =>
+      ['delivery:index:Stacks', 'delivery:index:Job'].includes(type),
+    );
+    expect(resultStage).toMatch(new RegExp(`${name}-canary$`));
+    expect(
+      [...resources.values()].filter(({ type }) => type === 'delivery:index:Stage'),
+    ).toHaveLength(1);
+    expect(members).toHaveLength(7);
+    const stageUrns = await Promise.all(
+      members.map(
+        (member) => new Promise<string>((resolve) => member.inputs.stage.urn.apply(resolve)),
+      ),
+    );
+    expect(stageUrns).toEqual(members.map(() => resultStage));
+    const order = [
+      'snapshot-job',
+      'publish-stack',
+      'verify-job',
+      'shift-stack',
+      'observe-job',
+      'finalize-stack',
+      'result-job',
+    ];
+    for (let i = 1; i < order.length; i++) {
+      const request = registrations.mock.calls.find(
+        ([registration]) => registration.getName() === `${name}-${order[i]}`,
+      )?.[0];
+      expect(request?.getDependenciesList()).toContainEqual(
+        expect.stringMatching(new RegExp(`::${name}-${order[i - 1]}$`)),
+      );
+    }
   },
 );

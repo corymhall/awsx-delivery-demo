@@ -59,7 +59,7 @@ Full example: [application stack](../../infra/index.ts) and [pipeline](../../pip
 
 ## Lambda Web Function canary
 
-Add a canary to an existing Delivery pipeline:
+Add a canary to an existing Delivery pipeline. The rollout runs as one stage with separate jobs and stack updates:
 
 ```ts
 import { WebFunctionCanary } from '@pulumi/awsx-delivery';

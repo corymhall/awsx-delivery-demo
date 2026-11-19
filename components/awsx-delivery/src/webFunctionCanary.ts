@@ -97,14 +97,12 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
       .apply((urn) =>
         getDeliverySource(`${name}-source-reference`, urn),
       ) as unknown as delivery.JobArgs['source'];
-    const stage = (suffix: string, from?: delivery.Stage): delivery.Stage =>
-      new delivery.Stage(`${name}-${suffix}`, { pipeline, from: from ? [from] : undefined }, child);
+    const stage = new delivery.Stage(`${name}-canary`, { pipeline }, child);
     const stackDirectory = args.target.directory ?? '.';
     const percent = validateInteger('canaryPercent', args.canaryPercent ?? 10, 1, 99);
     const job = createCanaryJobs(name, args, source, this, percent);
 
-    const snapshotStage = stage('snapshot');
-    const baseline = job('snapshot', snapshotStage).outputs.apply((outputs) => ({
+    const baseline = job('snapshot', stage).outputs.apply((outputs) => ({
       stableRevisionId: requireString(outputs?.stableRevisionId, 'snapshot.stableRevisionId', true),
       functionArn: requireString(outputs?.functionArn, 'snapshot.functionArn', true),
       productionEndpointArn: requireString(
@@ -116,13 +114,13 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
     }));
     const deploy = (
       suffix: string,
-      current: delivery.Stage,
       release: pulumi.Input<string>,
+      dependsOn?: pulumi.Resource,
     ): delivery.Stacks =>
       new delivery.Stacks(
         `${name}-${suffix}-stack`,
         {
-          stage: current,
+          stage,
           stacks: {
             target: {
               stack: args.target.stackName,
@@ -135,12 +133,10 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
             },
           },
         },
-        child,
+        { ...child, dependsOn },
       );
-    const publish = stage('publish', snapshotStage);
     const published = deploy(
       'publish',
-      publish,
       baseline.apply(({ stableRevisionId }) =>
         JSON.stringify({
           stableRevisionId,
@@ -179,8 +175,7 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
       CANARY_PRODUCTION_ENDPOINT_ARN: candidate.endpointArn,
       CANARY_STABLE_REVISION_ID: baseline.stableRevisionId,
     };
-    const verify = stage('verify', publish);
-    job('verify', verify, {
+    const verification = job('verify', stage, {
       ...candidateEnvironment,
       CANARY_PRODUCTION_URL: productionUrl(published),
     });
@@ -198,10 +193,9 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
             candidatePercent,
           }),
         );
-    const shift = stage('shift', verify);
-    const shifted = deploy('shift', shift, release('shift', percent));
-    const observe = stage('observe', shift);
-    const observation = job('observe', observe, {
+    // Shift uses the published revision but must wait for verification to succeed.
+    const shifted = deploy('shift', release('shift', percent), verification);
+    const observation = job('observe', stage, {
       ...candidateEnvironment,
       CANARY_PRODUCTION_URL: productionUrl(shifted),
     });
@@ -216,17 +210,14 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
         reason: requireString(outputs.reason, 'observe.reason', outputs.verdict === 'promote'),
       };
     });
-    const finalize = stage('finalize', observe);
     const finalized = deploy(
       'finalize',
-      finalize,
       release(
         'finalize',
         verdict.action.apply((action) => (action === 'promote' ? 100 : 0)),
       ),
     );
-    const result = stage('result', finalize);
-    job('result', result, {
+    job('result', stage, {
       ...candidateEnvironment,
       CANARY_PRODUCTION_ENDPOINT_ARN: pulumi
         .all([candidate, finalized.outputs])
@@ -245,7 +236,7 @@ export class WebFunctionCanary extends pulumi.ComponentResource {
       CANARY_VERDICT: verdict.action,
       CANARY_FAILURE_REASON: verdict.reason,
     });
-    this.completionStageUrn = result.urn;
+    this.completionStageUrn = stage.urn;
     this.registerOutputs({ completionStageUrn: this.completionStageUrn });
   }
 }
